@@ -1,0 +1,51 @@
+#include <iostream>
+#include <yaml-cpp/yaml.h>
+#include <random>
+#include <chrono>
+#include <vector>
+#include <algorithm>
+
+#include <Eigen/Core>
+#include <Eigen/Dense>
+
+#include "g2o/core/factory.h"
+#include "g2o/core/optimization_algorithm_factory.h"
+#include "g2o/core/sparse_optimizer.h"
+#include "g2o/stuff/command_args.h"
+#include "g2o/types/slam2d/types_slam2d.h"
+#include "g2o/types/slam3d/types_slam3d.h"
+
+
+struct Config
+{
+  std::string name;
+  std::string dataset;
+  std::string ground_truth;
+  std::string output;
+  bool visualize;
+  int canonic_inliers;
+  double fast_reject_th;
+  int fast_reject_iter_base;
+  double slow_reject_th;
+  int slow_reject_iter_base;
+};
+
+// Using edges to initialize graph
+template <class EDGE, class VERTEX>
+void odometryInitialization(g2o::SparseOptimizer& optimizer);
+
+// Sets the whole optimization problem
+template <class T, class EDGE, class VERTEX>
+void setProblem(const std::string& problem_file, 
+                g2o::SparseOptimizer& optimizer,
+                std::vector<T>& init_poses,
+                std::vector<VERTEX*>& v_poses);
+
+void writeVertex(std::ofstream& out_data, g2o::VertexSE2* v);
+void writeVertex(std::ofstream& out_data, g2o::VertexSE3* v);
+
+template <class T>
+void readSolutionFile(std::vector<T>& poses, const std::string& path);
+void readConfig(const std::string& cfg_filepath, Config& out_cfg);
+void readLine(std::ifstream& in_data, Eigen::Isometry2d& pose); 
+void readLine(std::ifstream& in_data, Eigen::Isometry3d& pose);
