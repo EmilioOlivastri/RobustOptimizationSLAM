@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 {
 
   // Command line parsing
-  int maxIterations = 2000;
+  int maxIterations = 1000;
   string outputFilename;
   string cfg_file;
   string inputFilename;
@@ -32,43 +32,28 @@ int main(int argc, char** argv)
   arg.parseArgs(argc, argv);
 
   // Storing initial guess and vertices of optimization
-  
-  /**
-  bool is3D = false;
-  typedef SE2 PoseType;
-  typedef EdgeSE2 EdgeType;
-  typedef VertexSE2 VertexType;
-  typedef EdgeSE2Mixture EdgeTypeMixture;
-  /**/
-  bool is3D = true;
-  typedef Eigen::Isometry3d PoseType;
-  typedef EdgeSE3 EdgeType;
-  typedef VertexSE3 VertexType;
-  typedef EdgeSE3Mixture EdgeTypeMixture;
-  /**/
-
-  vector<PoseType> init_poses;
-  vector<VertexType*> v_poses;
+  vector<Eigen::Isometry3d> init_poses;
+  vector<VertexSE3*> v_poses;
 
   Config cfg;
   readConfig(cfg_file, cfg);
 
   // create the optimizer to load the data and carry out the optimization
   SparseOptimizer optimizer;
-  setProblem<PoseType, EdgeType, VertexType>(inputFilename, optimizer, init_poses, v_poses);
+  setProblem<Eigen::Isometry3d, EdgeSE3, VertexSE3>(inputFilename, optimizer, init_poses, v_poses);
   
   /**/
-  std::vector<EdgeType*> e2remove;
-  std::vector<EdgeTypeMixture*> e2add;
+  std::vector<EdgeSE3*> e2remove;
+  std::vector<EdgeSE3Mixture*> e2add;
 
   for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
   {
-    EdgeType* edge_odom = dynamic_cast<EdgeType*>(*it_e);
+    EdgeSE3* edge_odom = dynamic_cast<EdgeSE3*>(*it_e);
     /* Odom edge loop closure */ 
     if ( edge_odom != nullptr && abs(edge_odom->vertices()[1]->id() - edge_odom->vertices()[0]->id()) > 1  )
     {
       /**/      
-      EdgeTypeMixture* e_maxmix = new EdgeTypeMixture();
+      EdgeSE3Mixture* e_maxmix = new EdgeSE3Mixture();
       e_maxmix->setVertex(0, edge_odom->vertices()[0]);
       e_maxmix->setVertex(1, edge_odom->vertices()[1]);
       initializeMixture(e_maxmix, edge_odom);
@@ -101,7 +86,7 @@ int main(int argc, char** argv)
   int tn = 0;
   int fp  = 0;
   int fn = 0; 
-  double th = 11.345;
+  double th = 16.81;
 
   for ( size_t idx = 0; idx < cfg.canonic_inliers; ++idx)
   {
@@ -122,7 +107,7 @@ int main(int argc, char** argv)
   outfile.open(cfg.output.c_str()); 
   for (size_t it = 0; it < optimizer.vertices().size(); ++it )
   {
-      VertexType* v = dynamic_cast<VertexType*>(optimizer.vertex(it));
+      VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
       writeVertex(outfile, v);
   }
   outfile.close();
@@ -133,6 +118,8 @@ int main(int argc, char** argv)
 
   std::cout << "Loops size = " << e2add.size() << std::endl;
   std::cout << "Canonic Inliers = " << cfg.canonic_inliers << std::endl;
+  std::cout << "Prec = " << precision << std::endl;
+  std::cout << "Rec = " << recall << std::endl;
   std::cout << "TP = " << tp << std::endl;
   std::cout << "TN = " << tn << std::endl;
   std::cout << "FP = " << fp << std::endl;

@@ -11,14 +11,46 @@ include_directories(
   ${YAML_CPP_INCLUDE_DIR}
 )
 
-add_executable(g2o_MAXMIX 
-src/maxmix.cpp 
+add_executable(g2o_MAXMIX_2D
+src/maxmix_2D.cpp 
 src/edge_se2_mixture.cpp 
+src/utils.cpp)
+add_executable(g2o_MAXMIX_3D 
+src/maxmix_3D.cpp 
 src/edge_se3_mixture.cpp 
 src/utils.cpp)
 
 
-target_link_libraries(g2o_MAXMIX
+target_link_libraries(g2o_MAXMIX_2D
+  ${G2O_TYPES_SLAM2D}
+  ${G2O_TYPES_SLAM3D}
+  ${G2O_TYPES_DATA}
+  ${G2O_CORE_LIBRARY}
+  ${G2O_STUFF_LIBRARY}
+  ${G2O_SOLVER_EIGEN}
+  glog
+  ${YAML_CPP_LIBRARIES}
+)
+
+target_link_libraries(g2o_MAXMIX_3D
+  ${G2O_TYPES_SLAM2D}
+  ${G2O_TYPES_SLAM3D}
+  ${G2O_TYPES_DATA}
+  ${G2O_CORE_LIBRARY}
+  ${G2O_STUFF_LIBRARY}
+  ${G2O_SOLVER_EIGEN}
+  glog
+  ${YAML_CPP_LIBRARIES}
+)
+
+
+
+add_executable(g2o_dataset_enhancer 
+src/dataset_enhancer.cpp 
+src/utils.cpp)
+
+
+target_link_libraries(g2o_dataset_enhancer
   ${G2O_TYPES_SLAM2D}
   ${G2O_TYPES_SLAM3D}
   ${G2O_TYPES_DATA}

@@ -52,7 +52,7 @@ void setProblem(const string& problem_file,
         return;
     }
     optimizer.load(ifs);
-    odometryInitialization<EDGE, VERTEX>(optimizer);
+    //odometryInitialization<EDGE, VERTEX>(optimizer);
     init_poses.resize(optimizer.vertices().size());
     v_poses.resize(optimizer.vertices().size());
     for ( auto it = optimizer.vertices().begin() ; it != optimizer.vertices().end() ; ++it )
@@ -143,10 +143,11 @@ void writeVertex(ofstream& out_data, VertexSE3* v)
 {
     Isometry3d pose = v->estimate();
     Quaterniond q(pose.linear());
+    Vector3d eul = pose.linear().eulerAngles(0, 1, 2);
     Vector3d t = pose.translation();
 
     out_data << t[0] << " " << t[1] << " " << t[2] << " "
-             << q.x() << " " << q.y() << " " << q.z() << " " << q.w() << endl;
+             << eul[0] << " " <<eul[1] << " " << eul[2] << endl;
 
     return;
 }
