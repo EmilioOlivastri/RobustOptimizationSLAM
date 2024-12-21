@@ -14,14 +14,11 @@ using namespace KimeraRPGO;
 using namespace gtsam;
 using namespace std;
 
-/* Usage: 
-  ./RpgoReadG2o <some-2d-g2o-file> <pcm_t_simple_thresh> <pcm_R_simple_thresh> 
-*/
 int main(int argc, char* argv[]) 
 {
 
   string cfg_file = "";
-  int maxIterations = 1000; // default
+  int maxIterations = 2000; // default
   string g2oFile = ""; // default
 
   // Parse user's inputs
@@ -33,15 +30,7 @@ int main(int argc, char* argv[])
   Config cfg;
   readConfig(cfg_file, cfg);
 
-  /**
-  bool is3D = true;
   typedef Pose3 PoseType;
-  /**/
-
-  bool is3D = false;
-  typedef Pose2 PoseType;
-  /**/
-
   vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
@@ -53,16 +42,15 @@ int main(int argc, char* argv[])
   RobustSolverParams params;
   NonlinearFactorGraph::shared_ptr graph;
   Values::shared_ptr initial;
+  bool is3D = true;
   boost::tie(graph, initial) = readG2o(g2oFile, is3D);
   Values new_init = *initial;
 
-  int dof = is3D ? 6 : 3;
+  int dof = 6;
   double th = 0.5 * Chi2inv(0.9, dof);
-  if (is3D) params.setPcm3DParams(th, th, Verbosity::QUIET);
-  else params.setPcm2DParams(th, th, Verbosity::QUIET);
-  params.setLmDiagonalDamping(false);
+  params.setPcm3DParams(th, th, Verbosity::QUIET);  
+  params.setLmDiagonalDamping(is3D);
   params.setGncInlierCostThresholdsAtProbability(0.9);
-
   unique_ptr<RobustSolver> pgo = KimeraRPGO::make_unique<RobustSolver>(params);  
   for (const auto& factor : *graph) {
     // convert to between factor
@@ -81,8 +69,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Adding prior on pose 0 " << std::endl;
   NonlinearFactorGraph nfg = *graph;
-  if (is3D) addPrior3D(nfg);
-  else addPrior2D(nfg);
+  addPrior3D(nfg);
   
   cout << "Starting optimization" << endl;
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
@@ -125,10 +112,8 @@ int main(int argc, char* argv[])
   cout << "final error=" << nfg.error(result)<< endl;
 
 
-  //result.print("result");
-  if (is3D) store3D(output_file, result);
-  else store2D(output_file, result);
-
+  store3D(output_file, result);
+  
   ofstream outfile;
   string out2 = output_file.substr(0, output_file.size() - 3) + "PR";
   outfile.open(out2.c_str());

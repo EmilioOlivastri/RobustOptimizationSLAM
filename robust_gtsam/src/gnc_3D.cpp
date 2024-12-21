@@ -6,7 +6,6 @@ using namespace gtsam;
 int main(int argc, char **argv) 
 {
   string cfg_file = "";
-  int maxIterations = 1000; // default
   string g2oFile = ""; // default
 
   // Parse user's inputs
@@ -18,15 +17,7 @@ int main(int argc, char **argv)
   Config cfg;
   readConfig(cfg_file, cfg);
 
-  /**
-  bool is3D = true;
   typedef Pose3 PoseType;
-  /**/
-
-  bool is3D = false;
-  typedef Pose2 PoseType;
-  /**/
-
   vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
@@ -36,7 +27,8 @@ int main(int argc, char **argv)
 
   NonlinearFactorGraph::shared_ptr graph;
   Values::shared_ptr initial;
-  boost::tie(graph, initial) = readG2o(g2oFile, is3D, KernelFunctionTypeHUBER);
+  bool is3D = true;
+  boost::tie(graph, initial) = readG2o(g2oFile, is3D);
   Values new_init = *initial;
 
   int edge_counter = 0;
@@ -45,7 +37,7 @@ int main(int argc, char **argv)
     // convert to between factor
     if (new_init.exists(factor->front())) 
     {
-      BetweenFactor<PoseType>& btwn =
+        BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
       new_init.update(
           factor->back(),
@@ -53,29 +45,28 @@ int main(int argc, char **argv)
     }
 
     int delta = factor->front() - factor->back();
-    if ( std::abs(delta) > 1 ) loops.push_back(factor);    
+    if ( abs(delta) > 1 ) loops.push_back(factor);    
   }
   
   int inliers = cfg.canonic_inliers;
-
+ 
   // Add prior on the pose having index (key) = 0
-  std::cout << "Adding prior on pose 0 " << std::endl;
   NonlinearFactorGraph nfg = *graph;
-  if (is3D) addPrior3D(nfg);
-  else addPrior2D(nfg);
-
+  cout << "Adding prior on pose 0 " << endl;
+  addPrior3D(nfg);
+  
   LevenbergMarquardtParams lmParams;
-  lmParams.setMaxIterations(maxIterations);
-  LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
+  GncParams<LevenbergMarquardtParams> gncParams(lmParams);
+  auto gnc = GncOptimizer<GncParams<LevenbergMarquardtParams>>(nfg, new_init, gncParams);
+  cout << "Optimizing the factor graph" << endl;
 
-  std::cout << "Optimizing the factor graph" << std::endl;
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-  Values result = lm.optimize();
+  Values result = gnc.optimize();
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
 
-  int dof = is3D ? 6 : 3;
-  double barcSq = 0.5 * Chi2inv(0.99, dof);
+  int dof = 6;
+  double barcSq = 0.5 * Chi2inv(0.9, dof);
   int tp  = 0; int tn = 0;
   int fp  = 0; int fn = 0;
   for ( int idx = 0; idx < inliers; ++idx)
@@ -104,20 +95,18 @@ int main(int argc, char **argv)
   float recall    = tp / (float)(tp + fn); 
   float dt = delta_time.count() / 1000000.0;
 
-  std::cout << "Optimization complete in " << dt << " [s]" << std::endl;
-  std::cout << "Precision  = " << precision << std::endl;
-  std::cout << "Recall = " << recall << std::endl;
-  std::cout << "initial error=" <<graph->error(*initial)<< std::endl;
-  std::cout << "final error=" <<graph->error(result)<< std::endl;
+  cout << "Optimization complete in " << dt << " [s]" << endl;
+  cout << "Precision  = " << precision << endl;
+  cout << "Recall = " << recall << endl;
+  cout << "initial error=" <<graph->error(*initial)<< endl;
+  cout << "final error=" <<graph->error(result)<< endl;
   
 
-  //result.print("result");
-  if (is3D) store3D(output_file, result);
-  else store2D(output_file, result);
+  store3D(output_file, result);
 
   ofstream outfile;
-  string out2 = output_file.substr(0, output_file.size() - 3) + "PR";
-  outfile.open(out2.c_str());
+  string out_pr = output_file.substr(0, output_file.size() - 3) + "PR";
+  outfile.open(out_pr.c_str());
   outfile << precision << " " << recall << endl;
   outfile << dt << endl;
   outfile.close();

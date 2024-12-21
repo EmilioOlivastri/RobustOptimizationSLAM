@@ -14,14 +14,17 @@ include_directories(
   ${YAML_CPP_INCLUDE_DIR}
 )
 
-
-add_executable(gtsam_HUBER src/huber.cpp src/utils.cpp)
-add_executable(gtsam_GNC src/gnc.cpp src/utils.cpp)
-add_executable(gtsam_DCS src/dcs.cpp src/utils.cpp)
-add_executable(gtsam_PCM src/rpgo.cpp src/utils.cpp)
+add_executable(gtsam_HUBER_2D src/huber_2D.cpp src/utils.cpp)
+add_executable(gtsam_HUBER_3D src/huber_3D.cpp src/utils.cpp)
+add_executable(gtsam_DCS_2D src/dcs_2D.cpp src/utils.cpp)
+add_executable(gtsam_DCS_3D src/dcs_3D.cpp src/utils.cpp)
+add_executable(gtsam_GNC_2D src/gnc_2D.cpp src/utils.cpp)
+add_executable(gtsam_GNC_3D src/gnc_3D.cpp src/utils.cpp)
+add_executable(gtsam_PCM_2D src/rpgo_2D.cpp src/utils.cpp)
+add_executable(gtsam_PCM_3D src/rpgo_3D.cpp src/utils.cpp)
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(gtsam_HUBER
+target_link_libraries(gtsam_HUBER_2D
 ${catkin_LIBRARIES}
 ${GTSAM_LIBS}
 ${MKL_LIBRARIES}
@@ -31,7 +34,8 @@ ${MKL_LIBRARIES}
 )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(gtsam_GNC
+target_link_libraries(gtsam_HUBER_3D
+${catkin_LIBRARIES}
 ${GTSAM_LIBS}
 ${MKL_LIBRARIES}
   tbb
@@ -39,7 +43,8 @@ ${MKL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
 
-target_link_libraries(gtsam_DCS
+## Specify libraries to link a library or executable target against
+target_link_libraries(gtsam_GNC_2D
 ${GTSAM_LIBS}
 ${MKL_LIBRARIES}
   tbb
@@ -47,7 +52,39 @@ ${MKL_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
 )
 
-target_link_libraries(gtsam_PCM
+target_link_libraries(gtsam_GNC_3D
+${GTSAM_LIBS}
+${MKL_LIBRARIES}
+  tbb
+  tbbmalloc
+  ${YAML_CPP_LIBRARIES}
+)
+
+target_link_libraries(gtsam_DCS_2D
+${GTSAM_LIBS}
+${MKL_LIBRARIES}
+  tbb
+  tbbmalloc
+  ${YAML_CPP_LIBRARIES}
+)
+
+target_link_libraries(gtsam_DCS_3D
+${GTSAM_LIBS}
+${MKL_LIBRARIES}
+  tbb
+  tbbmalloc
+  ${YAML_CPP_LIBRARIES}
+)
+
+target_link_libraries(gtsam_PCM_2D
+${GTSAM_LIBS}
+tbb
+tbbmalloc
+KimeraRPGO
+${YAML_CPP_LIBRARIES}
+)
+
+target_link_libraries(gtsam_PCM_3D
 ${GTSAM_LIBS}
 tbb
 tbbmalloc

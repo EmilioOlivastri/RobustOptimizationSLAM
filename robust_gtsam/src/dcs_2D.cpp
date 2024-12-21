@@ -8,7 +8,7 @@ using namespace gtsam;
 int main(int argc, char **argv) 
 {
   string cfg_file = "";
-  int maxIterations = 10; // default
+  int maxIterations = 1000; // default
   string g2oFile = ""; // default
 
   // Parse user's inputs
@@ -20,15 +20,8 @@ int main(int argc, char **argv)
   Config cfg;
   readConfig(cfg_file, cfg);
 
-  /**
-  bool is3D = true;
-  typedef Pose3 PoseType;
-  /**/
-
-  bool is3D = false;
+  
   typedef Pose2 PoseType;
-  /**/
-
   vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
@@ -38,10 +31,13 @@ int main(int argc, char **argv)
 
   NonlinearFactorGraph::shared_ptr graph;
   Values::shared_ptr initial;
+  bool is3D = false;
   boost::tie(graph, initial) = readG2o(g2oFile, is3D);
   Values new_init = *initial;
 
+  int dof = 6;
   int id = 0;
+  double th = Chi2inv(0.99, dof);
   for (auto& factor : *graph) 
   {
     // convert to between factor
@@ -60,7 +56,7 @@ int main(int argc, char **argv)
         BetweenFactor<PoseType>& loop =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
         auto noise = loop.noiseModel();
-        auto robust_noise = noiseModel::Robust::Create(noiseModel::mEstimator::DCS::Create(1.0), noise);
+        auto robust_noise = noiseModel::Robust::Create(noiseModel::mEstimator::DCS::Create(th), noise);
 
         NonlinearFactor::shared_ptr new_factor(new BetweenFactor<PoseType>(BetweenFactor<PoseType>(loop.front(), loop.back(), loop.measured(), robust_noise)));
         graph->replace(id, new_factor);
@@ -75,8 +71,7 @@ int main(int argc, char **argv)
   // Add prior on the pose having index (key) = 0
   std::cout << "Adding prior on pose 0 " << std::endl;
   NonlinearFactorGraph nfg = *graph;
-  if (is3D) addPrior3D(nfg);
-  else addPrior2D(nfg);
+  addPrior2D(nfg);
 
   LevenbergMarquardtParams lmParams;
   lmParams.setMaxIterations(maxIterations);
@@ -89,7 +84,6 @@ int main(int argc, char **argv)
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
 
-  int dof = is3D ? 6 : 3;
   double barcSq = 0.5 * Chi2inv(0.99, dof);
   int tp  = 0; int tn = 0;
   int fp  = 0; int fn = 0;
@@ -122,11 +116,14 @@ int main(int argc, char **argv)
   std::cout << "Optimization complete in " << dt << " [s]" << std::endl;
   std::cout << "Precision  = " << precision << std::endl;
   std::cout << "Recall = " << recall << std::endl;
+  std::cout << "TP = " << tp << std::endl;
+  std::cout << "TN = " << tn << std::endl;
+  std::cout << "FP = " << fp << std::endl;
+  std::cout << "FN = " << fn << std::endl;
   std::cout << "initial error=" <<graph->error(*initial)<< std::endl;
   std::cout << "final error=" <<graph->error(result)<< std::endl;
   
-  if (is3D) store3D(output_file, result);
-  else store2D(output_file, result);
+  store2D(output_file, result);
 
   string out2 = output_file.substr(0, output_file.size() - 3) + "PR";
   ofstream outfile;
