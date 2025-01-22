@@ -63,13 +63,13 @@ alpha: 0.99; <- Parameter for M-Estimators
 5. Run the following command for running the tester for IPC:
 ```
 # For G2O
-./build/robust_g2o/g2o_MAXMIX_2D -cfg ./build/cfg/params.yaml
-./build/robust_g2o/g2o_sc_2D -cfg ./build/cfg/params.yaml
+./build/robust_g2o/g2o_MAXMIX_2D -cfg ./robust_g2o/cfg/params.yaml
+./build/robust_g2o/g2o_sc_2D -cfg ./robust_g2o/cfg/params.yaml
 
 # For GTSAM
-./build/robust_gtsam/gtsam_DCS_2D ./build/cfg/params.yaml
-./build/robust_gtsam/gtsam_GNC_2D ../build/cfg/params.yaml
-./build/robust_gtsam/gtsam_PCM_2D ../build/cfg/params.yaml
+./build/robust_gtsam/gtsam_DCS_2D ./robust_gtsam/cfg/params.yaml
+./build/robust_gtsam/gtsam_GNC_2D ../robust_gtsam/cfg/params.yaml
+./build/robust_gtsam/gtsam_PCM_2D ../robust_gtsam/cfg/params.yaml
 ```
 It will produce 2 files: output_name.txt and output_name.PR.
 The first file contains the final estimated trajectory, while the latter
