@@ -18,16 +18,19 @@
 
 struct Config
 {
-  std::string name;
   std::string dataset;
-  std::string ground_truth;
   std::string output;
-  bool visualize;
   int canonic_inliers;
-  double fast_reject_th;
-  int fast_reject_iter_base;
-  double slow_reject_th;
-  int slow_reject_iter_base;
+  int maxiters;
+  double inlier_th;
+  
+  // Switchable parameters
+  double switch_prior;
+  
+  // MaxMix parameters
+  double maxmix_weight;
+  double nu_constraints;
+  double nu_nullHypothesis;
 };
 
 // Using edges to initialize graph

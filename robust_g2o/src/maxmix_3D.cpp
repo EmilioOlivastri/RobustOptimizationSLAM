@@ -1,34 +1,23 @@
 #include "utils.hpp"
-#include "edge_se2_mixture.hpp"
-#include "edge_se3_mixture.hpp"
+#include "maxmixConstraints/include/edge_se3_mixture.hpp"
 
 using namespace std;
 using namespace g2o;
 
 // we use the 2D and 3D SLAM types here
-G2O_USE_TYPE_GROUP(slam2d);
 G2O_USE_TYPE_GROUP(slam3d);
 G2O_USE_OPTIMIZATION_LIBRARY(eigen);
 
-void initializeMixture(EdgeSE2Mixture* e_maxmix, EdgeSE2* e_odom);
 void initializeMixture(EdgeSE3Mixture* e_maxmix, EdgeSE3* e_odom);
 
 int main(int argc, char** argv) 
 {
-
   // Command line parsing
-  int maxIterations = 1000;
-  string outputFilename;
   string cfg_file;
-  string inputFilename;
   CommandArgs arg;
   
   arg.param("cfg", cfg_file, "",
-            "trajectory file used for evaluation");
-  arg.param("o", outputFilename, "res.txt",
-            "trajectory file used for evaluation");
-  arg.paramLeftOver("graph-input", inputFilename, "",
-                    "graph file which will be processed");
+            "Configuration File(.yaml)");
   arg.parseArgs(argc, argv);
 
   // Storing initial guess and vertices of optimization
@@ -37,10 +26,17 @@ int main(int argc, char** argv)
 
   Config cfg;
   readConfig(cfg_file, cfg);
+  string input_dataset = cfg.dataset;
+  int maxIterations = cfg.maxiters;
+  double inlier_th = cfg.inlier_th;
+  int inliers = cfg.canonic_inliers;
+  double maxmix_weight = cfg.maxmix_weight;
+  double nu_constraints = cfg.nu_constraints;
+  double nu_nullHypothesis = cfg.nu_nullHypothesis;
 
   // create the optimizer to load the data and carry out the optimization
   SparseOptimizer optimizer;
-  setProblem<Eigen::Isometry3d, EdgeSE3, VertexSE3>(inputFilename, optimizer, init_poses, v_poses);
+  setProblem<Eigen::Isometry3d, EdgeSE3, VertexSE3>(input_dataset, optimizer, init_poses, v_poses);
   
   /**/
   std::vector<EdgeSE3*> e2remove;
@@ -58,10 +54,10 @@ int main(int argc, char** argv)
       e_maxmix->setVertex(1, edge_odom->vertices()[1]);
       initializeMixture(e_maxmix, edge_odom);
       e_maxmix->setInformation(edge_odom->information());
-      e_maxmix->weight = 1e-1;
+      e_maxmix->weight = maxmix_weight;
       e_maxmix->information_constraint = edge_odom->information();
-      e_maxmix->nu_constraint = 0.9;
-      e_maxmix->nu_nullHypothesis = 1e-5;
+      e_maxmix->nu_constraint = nu_constraints;
+      e_maxmix->nu_nullHypothesis = nu_nullHypothesis;
 
       e2add.push_back(e_maxmix);
       e2remove.push_back(edge_odom);
@@ -82,12 +78,7 @@ int main(int argc, char** argv)
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
 
-  int tp  = 0;
-  int tn = 0;
-  int fp  = 0;
-  int fn = 0; 
-  double th = 16.81;
-
+  int tp  = 0; int tn = 0; int fp  = 0; int fn = 0; 
   for ( size_t idx = 0; idx < cfg.canonic_inliers; ++idx)
   {
     if ( !e2add[idx]->isOutlier() ) ++tp;
@@ -104,7 +95,8 @@ int main(int argc, char** argv)
   std::cout << "Optimtization Concluded!" << std::endl;
 
   ofstream outfile;
-  outfile.open(cfg.output.c_str()); 
+  string output_file_trj = cfg.output;
+  outfile.open(output_file_trj.c_str()); 
   for (size_t it = 0; it < optimizer.vertices().size(); ++it )
   {
       VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
@@ -126,24 +118,13 @@ int main(int argc, char** argv)
   std::cout << "FN = " << fn << std::endl;
 
 
-  string out = outputFilename.substr(0, outputFilename.size() - 3) + "PR";
-  outfile.open(out.c_str());
+  string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
+  outfile.open(output_file_pr.c_str());
   outfile << precision << " " << recall << endl;
   outfile << dt << endl;
   outfile.close();
 
   return 0;
-}
-
-
-void initializeMixture(EdgeSE2Mixture* e_maxmix, EdgeSE2* e_odom)
-{
-  double m[3];
-  e_odom->getMeasurementData(m);
-  e_maxmix->setMeasurement(SE2(m[0], m[1], m[2]));
-  e_maxmix->information_nullHypothesis = Eigen::Matrix3d::Identity();
-
-  return;
 }
 
 void initializeMixture(EdgeSE3Mixture* e_maxmix, EdgeSE3* e_odom)

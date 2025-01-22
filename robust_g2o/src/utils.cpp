@@ -188,16 +188,20 @@ void readConfig(const std::string& cfg_filepath, Config& out_cfg)
     const YAML::Node config = YAML::LoadFile(cfg_filepath);
 
     // Filter parameters
-    out_cfg.name = config["name"].as<std::string>();
     out_cfg.dataset = config["dataset"].as<std::string>();
-    out_cfg.ground_truth = config["ground_truth"].as<std::string>();
     out_cfg.output = config["output"].as<std::string>();
-    out_cfg.visualize = config["visualize"].as<int>() == 1 ? true : false;
     out_cfg.canonic_inliers = config["canonic_inliers"].as<int>();
-    out_cfg.fast_reject_th = config["fast_reject_th"].as<double>();
-    out_cfg.fast_reject_iter_base = config["fast_reject_iter_base"].as<int>();
-    out_cfg.slow_reject_th = config["slow_reject_th"].as<double>();
-    out_cfg.slow_reject_iter_base = config["slow_reject_iter_base"].as<int>();
+    out_cfg.maxiters = config["max_iters"].as<int>();
+    out_cfg.inlier_th = config["inlier_th"].as<double>();
+    
+    // Switchable variables
+    out_cfg.switch_prior = config["switch_prior"].as<double>();
+
+    // MaxMix parameters
+    out_cfg.maxmix_weight = config["maxmix_weight"].as<double>();
+    out_cfg.nu_constraints = config["nu_constraint"].as<double>();
+    out_cfg.nu_nullHypothesis = config["nu_nullHypothesis"].as<double>();
+
 
     return;
 }
