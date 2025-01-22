@@ -16,41 +16,41 @@ using namespace std;
 
 int main(int argc, char* argv[]) 
 {
+  // Command line parsing
+  string cfg_file;
 
-  string cfg_file = "";
-  int maxIterations = 2000; // default
-  string g2oFile = ""; // default
-
-  // Parse user's inputs
-  string output_file = "res.txt";
-  if (argc > 1) g2oFile = argv[1]; 
-  if (argc > 2) cfg_file = argv[2];
-  if (argc > 3) output_file = argv[3]; // Number of iterations
+  if (argc < 2) 
+  {
+    cout << "Usage: " << argv[0] << " <cfg_file>" << endl;
+    return 1;
+  }
+  cfg_file = argv[1];
 
   Config cfg;
   readConfig(cfg_file, cfg);
+  string input_dataset = cfg.dataset;
+  int maxIterations = cfg.maxiters;
+  double inlier_th = cfg.inlier_th;
+  int inliers = cfg.canonic_inliers;
+  double alpha = cfg.alpha; 
+  string output_file_trj = cfg.output;
 
   typedef Pose2 PoseType;
   vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
-  // reading file and creating factor graph
-  ifstream in_data(g2oFile.c_str());
-  if (!in_data )
-    throw invalid_argument("Cannot find file : " + g2oFile);
-
   RobustSolverParams params;
   NonlinearFactorGraph::shared_ptr graph;
   Values::shared_ptr initial;
   bool is3D = false;
-  boost::tie(graph, initial) = readG2o(g2oFile, is3D);
+  boost::tie(graph, initial) = readG2o(input_dataset, is3D);
   Values new_init = *initial;
 
   int dof = 3;
-  double th = 0.5 * Chi2inv(0.9, dof);
+  double th = 0.5 * Chi2inv(alpha, dof);
   params.setPcm2DParams(th, th, Verbosity::QUIET);
   params.setLmDiagonalDamping(is3D);
-  params.setGncInlierCostThresholdsAtProbability(0.9);
+  params.setGncInlierCostThresholdsAtProbability(alpha);
   unique_ptr<RobustSolver> pgo = KimeraRPGO::make_unique<RobustSolver>(params);  
   for (const auto& factor : *graph) 
   {
@@ -79,10 +79,10 @@ int main(int argc, char* argv[])
   Values result = pgo->calculateBestEstimate();
   double dt = chrono::duration_cast<chrono::microseconds>(end - begin).count() / 1000000.0;
 
-  double barcSq = 0.5 * Chi2inv(0.99, dof);
+  double barcSq = 0.5 * Chi2inv(inlier_th, dof);
   int tp  = 0; int tn = 0;
   int fp  = 0; int fn = 0;
-  for ( int idx = 0; idx < cfg.canonic_inliers; ++idx)
+  for ( int idx = 0; idx < inliers; ++idx)
   {
     const BetweenFactor<PoseType>& btwn = *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(loops[idx]);
     Values tmp;
@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
     else ++fn;
   }
 
-  for ( int idx = cfg.canonic_inliers; idx < loops.size(); ++idx)
+  for ( int idx = inliers; idx < loops.size(); ++idx)
   {
     const BetweenFactor<PoseType>& btwn = *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(loops[idx]);
     Values tmp;
@@ -113,11 +113,11 @@ int main(int argc, char* argv[])
   cout << "final error=" << nfg.error(result)<< endl;
 
 
-  store2D(output_file, result);
+  store2D(output_file_trj, result);
 
+  string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
   ofstream outfile;
-  string out2 = output_file.substr(0, output_file.size() - 3) + "PR";
-  outfile.open(out2.c_str());
+  outfile.open(output_file_pr.c_str());
   outfile << precision << " " << recall << endl;
   outfile << dt << endl;
   outfile.close();

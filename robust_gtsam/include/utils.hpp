@@ -8,28 +8,30 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/GncOptimizer.h>
 
-#include <boost/filesystem.hpp>
+#include <iostream>
 #include <yaml-cpp/yaml.h>
+#include <random>
+#include <chrono>
+#include <vector>
+#include <algorithm>
 
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
 #include <string>
-#include <iostream>
+
+#define LINESIZE 81920
 
 
 struct Config
 {
-  std::string name;
   std::string dataset;
-  std::string ground_truth;
   std::string output;
-  bool visualize;
   int canonic_inliers;
-  double fast_reject_th;
-  int fast_reject_iter_base;
-  double slow_reject_th;
-  int slow_reject_iter_base;
+  int maxiters;
+  double inlier_th;
+  double alpha;
+  
 };
 
 
