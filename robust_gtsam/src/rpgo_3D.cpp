@@ -49,9 +49,9 @@ int main(int argc, char* argv[])
 
   int dof = 6;
   double th = 0.5 * Chi2inv(alpha, dof);
-  params.setPcm3DParams(th, th, Verbosity::QUIET);  
+  params.setPcm3DParams(-th, th, Verbosity::QUIET);  
   params.setLmDiagonalDamping(is3D);
-  params.setGncInlierCostThresholdsAtProbability(alpha);
+  //params.setGncInlierCostThresholdsAtProbability(alpha);
   unique_ptr<RobustSolver> pgo = KimeraRPGO::make_unique<RobustSolver>(params);  
   for (const auto& factor : *graph) {
     // convert to between factor

@@ -47,15 +47,15 @@ int main(int argc, char* argv[])
   Values new_init = *initial;
 
   int dof = 3;
-  double th = 0.5 * Chi2inv(alpha, dof);
-  params.setPcm2DParams(th, th, Verbosity::QUIET);
+  double th = 0.5 *Chi2inv(alpha, dof);
+  params.setPcm2DParams(-th, th, Verbosity::QUIET);
   params.setLmDiagonalDamping(is3D);
-  params.setGncInlierCostThresholdsAtProbability(alpha);
+  //params.setGncInlierCostThresholdsAtProbability(alpha);
   unique_ptr<RobustSolver> pgo = KimeraRPGO::make_unique<RobustSolver>(params);  
   for (const auto& factor : *graph) 
   {
     // convert to between factor
-    if (new_init.exists(factor->front())) 
+    if (new_init.exists(factor->front()) && abs(int(factor->front() - factor->back())) == 1) 
     {
       BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
@@ -109,6 +109,10 @@ int main(int argc, char* argv[])
   cout << "Optimization complete in " << dt << " [s]" << endl;
   cout << "Precision  = " << precision << endl;
   cout << "Recall = " << recall << endl;
+  cout << "TP = " << tp << endl;
+  cout << "TN = " << tn << endl;
+  cout << "FP = " << fp << endl;
+  cout << "FN = " << fn << endl;
   cout << "initial error=" << nfg.error(*initial)<< endl;
   cout << "final error=" << nfg.error(result)<< endl;
 

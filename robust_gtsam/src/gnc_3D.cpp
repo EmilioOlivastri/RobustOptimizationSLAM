@@ -34,8 +34,11 @@ int main(int argc, char **argv)
   Values new_init = *initial;
 
   int edge_counter = 0;
-  for (const auto& factor : *graph) 
+  vector<size_t> knownInliers;
+  for (size_t idx = 0; idx < graph->size(); ++idx)
   {
+    auto factor = (*graph)[idx];
+
     // convert to between factor
     if (new_init.exists(factor->front())) 
     {
@@ -47,16 +50,21 @@ int main(int argc, char **argv)
     }
 
     int delta = factor->front() - factor->back();
-    if ( abs(delta) > 1 ) loops.push_back(factor);    
+    if ( abs(delta) > 1 ) loops.push_back(factor);
+    else knownInliers.push_back(idx);
   }
    
   // Add prior on the pose having index (key) = 0
   NonlinearFactorGraph nfg = *graph;
   cout << "Adding prior on pose 0 " << endl;
   addPrior3D(nfg);
+  knownInliers.push_back(graph->size() - 1);
   
   LevenbergMarquardtParams lmParams;
   GncParams<LevenbergMarquardtParams> gncParams(lmParams);
+  GncParams<LevenbergMarquardtParams>::IndexVector vecKnownInliers(knownInliers.begin(), knownInliers.end());
+  gncParams.setKnownInliers(vecKnownInliers);
+  gncParams.setLossType(GncLossType::TLS);
   auto gnc = GncOptimizer<GncParams<LevenbergMarquardtParams>>(nfg, new_init, gncParams);
   cout << "Optimizing the factor graph" << endl;
 
