@@ -23,10 +23,11 @@ int main(int argc, char **argv)
   int inliers = cfg.canonic_inliers;
   double alpha = cfg.alpha; 
   string output_file_trj = cfg.output;
+  bool init_loop = cfg.init_loop;
   
   typedef Pose2 PoseType;
-  vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
+  vector<size_t> idxsLoops;
 
   // reading file and creating factor graph
   NonlinearFactorGraph::shared_ptr graph;
@@ -35,11 +36,15 @@ int main(int argc, char **argv)
   boost::tie(graph, initial) = readG2o(input_dataset, is3D, KernelFunctionTypeHUBER);
   Values new_init = *initial;
 
-  int edge_counter = 0;
-  for (const auto& factor : *graph) 
+  for (size_t idx = 0; idx < graph->size(); ++idx)
   {
+    auto factor = (*graph)[idx];
+    bool isbinary = new_init.exists(factor->front());
+    int delta = factor->front() - factor->back();
+
     // convert to between factor
-    if (new_init.exists(factor->front())) 
+    /**
+    if (isbinary && (init_loop || std::abs(delta) == 1)) 
     {
       BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
@@ -47,11 +52,15 @@ int main(int argc, char **argv)
           factor->back(),
           new_init.at<PoseType>(factor->front()).compose(btwn.measured()));
     }
+    /**/
 
-    int delta = factor->front() - factor->back();
-    if ( std::abs(delta) > 1 ) loops.push_back(factor);    
+    if ( std::abs(delta) > 1 ) 
+    {
+      loops.push_back(factor);
+      idxsLoops.push_back(idx);
+    }    
   }
-  
+
   // Add prior on the pose having index (key) = 0
   std::cout << "Adding prior on pose 0 " << std::endl;
   NonlinearFactorGraph nfg = *graph;
@@ -59,6 +68,8 @@ int main(int argc, char **argv)
 
   LevenbergMarquardtParams lmParams;
   lmParams.setMaxIterations(maxIterations);
+  lmParams.setVerbosityLM("SUMMARY");
+  //lmParams.setVerbosity("ERROR");
   LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
 
   std::cout << "Optimizing the factor graph" << std::endl;
@@ -93,17 +104,41 @@ int main(int argc, char **argv)
     else ++tn;
   }
 
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  for (size_t idx = 0; idx < idxsLoops.size(); ++idx)
+  {
+    int real_idx = idxsLoops[idx];
+    auto factor = nfg[real_idx];
+    Values tmp;
+    tmp.insert(factor->back(), result.at<PoseType>(factor->back()));
+    tmp.insert(factor->front(), result.at<PoseType>(factor->front()));
+    double v = factor->error(tmp);
+    if ( v > barcSq) nfg.remove(real_idx);
+  }
+
+  LevenbergMarquardtParams lmParams_ref;
+  lmParams_ref.setMaxIterations(maxIterations);
+  lmParams_ref.setVerbosityLM("SUMMARY");
+  LevenbergMarquardtOptimizer lm_ref(nfg, new_init, lmParams_ref);
+  Values result_lm = lm_ref.optimize();
+  //Values result_lm = result;
+
+  float precision = tp + fp > 0.0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0.0 ? tp / (float)(tp + fn) : 0.0; 
   float dt = delta_time.count() / 1000000.0;
 
   std::cout << "Optimization complete in " << dt << " [s]" << std::endl;
+  std::cout << "TP = " << tp << std::endl;
+  std::cout << "TN = " << tn << std::endl;
+  std::cout << "FP = " << fp << std::endl;
+  std::cout << "FN = " << fn << std::endl;
   std::cout << "Precision  = " << precision << std::endl;
   std::cout << "Recall = " << recall << std::endl;
-  std::cout << "initial error=" <<graph->error(*initial)<< std::endl;
-  std::cout << "final error=" <<graph->error(result)<< std::endl;
+  std::cout << "initial error=" <<graph->error(new_init)<< std::endl;
+  std::cout << "final error=" <<nfg.error(result)<< std::endl;
   
   store2D(output_file_trj, result);
+  store2D("init.txt", new_init);
+  store2D("refined.txt", result_lm);
 
   string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
   ofstream outfile;
