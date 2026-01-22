@@ -1,7 +1,10 @@
 # Cmake test file 
-cmake_minimum_required(VERSION 3.5.2)
+cmake_minimum_required(VERSION 3.5...4.5)
 project(rrrlib)
 SET(CMAKE_BUILD_TYPE Release)
+
+set(G2O_ROOT /home/slamemix/Workspace/libs/g2o/build)
+find_package(G2O REQUIRED)
 
 add_library(rrrlib INTERFACE)
 

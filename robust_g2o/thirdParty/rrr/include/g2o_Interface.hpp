@@ -153,9 +153,9 @@ public:
 			return false;
 		}
 		optimizer = new g2o::SparseOptimizer;
-		auto linearSolver = g2o::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+		auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 		linearSolver->setBlockOrdering(false);
-		auto blockSolver = g2o::make_unique<BlockSolverX>(std::move(linearSolver));
+		auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
 
 		OptimizationAlgorithmGaussNewton *optimizationAlgorithm =
 			new OptimizationAlgorithmGaussNewton(std::move(blockSolver));

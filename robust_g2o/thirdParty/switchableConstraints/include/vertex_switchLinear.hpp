@@ -11,11 +11,11 @@ public:
 
     virtual void setToOriginImpl();
 
-    virtual void oplusImpl(const number_t* update);
+    virtual void oplusImpl(const double* update);
 
     virtual bool read(std::istream& is);
     virtual bool write(std::ostream& os) const;
-    virtual bool setEstimateDataImpl(const number_t* et);
+    virtual bool setEstimateDataImpl(const double* et);
 
 
     double x() const { return _x; };
