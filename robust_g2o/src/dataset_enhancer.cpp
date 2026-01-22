@@ -38,8 +38,6 @@ int main(int argc, char** argv)
   // create the optimizer to load the data and carry out the optimization
   SparseOptimizer optimizer;
   setProblem<PoseType, EdgeType, VertexType>(seeded_trajectory, optimizer, init_poses, v_poses);
-
-  /**/
   optimizer.vertex(0)->setFixed(true);
   std::cout << "Starting optimization : " << std::endl;
   optimizer.initializeOptimization();
@@ -48,9 +46,7 @@ int main(int argc, char** argv)
   optimizer.optimize(maxIterations);
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
-  /**/
 
-  
   // Getting loop closure edges and using them as seed to create 
   // new artificial loop edges
   std::vector<std::pair<int, int>> sloop_edges; // seeds
@@ -112,9 +108,6 @@ int main(int argc, char** argv)
     }
   }
 
-  //optimizer.initializeOptimization();
-  //optimizer.optimize(maxIterations);
-  //optimizer.pop();
   for (size_t it = 0; it < optimizer.vertices().size(); ++it )
   {
       VertexType* v = dynamic_cast<VertexType*>(optimizer.vertex(it));

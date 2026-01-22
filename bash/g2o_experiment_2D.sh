@@ -7,7 +7,7 @@ date="210823"
 
 # G2O related solutiona
 g2o_opt="G2O"
-g2o_list="MAXMIX"
+g2o_list="MAXMIX RRR SC"
 
 cd ../build/robust_g2o
 

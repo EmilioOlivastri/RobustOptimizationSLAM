@@ -1,0 +1,11 @@
+name : "INTEL"
+dataset : "/home/slam-emix/Datasets/BACK_END/3D/KITTI_00/SPOILED_DATA/30/00.g2o"
+ground_truth : "/home/slam-emix/Datasets/BACK_END/3D/KITTI_00/GT.txt"
+output : "res.txt"
+canonic_inliers : 79
+max_iters: 1000
+inlier_th: 0.5
+switch_prior: 10.0
+maxmix_weight: 1e-1
+nu_constraint: 0.9
+nu_nullHypothesis: 1e-5

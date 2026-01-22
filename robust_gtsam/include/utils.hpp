@@ -6,6 +6,7 @@
 #include <gtsam/inference/Symbol.h>
 #include <gtsam/nonlinear/GaussNewtonOptimizer.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <gtsam/nonlinear/DoglegOptimizer.h>
 #include <gtsam/nonlinear/GncOptimizer.h>
 
 #include <iostream>
@@ -22,7 +23,6 @@
 
 #define LINESIZE 81920
 
-
 struct Config
 {
   std::string dataset;
@@ -31,7 +31,7 @@ struct Config
   int maxiters;
   double inlier_th;
   double alpha;
-  
+  bool init_loop;
 };
 
 

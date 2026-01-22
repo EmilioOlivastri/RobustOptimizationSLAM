@@ -1,5 +1,5 @@
 name : "INTEL"
-dataset : "/home/slam-emix/Datasets/BACK_END/2D/INTEL/SPOILED_DATA/50/06.g2o"
+dataset : "/home/slam-emix/Datasets/BACK_END/2D/INTEL/SPOILED_DATA/30/01.g2o"
 ground_truth : "/home/slam-emix/Datasets/BACK_END/2D/INTEL/GT.txt"
 output : "res.txt"
 canonic_inliers : 256

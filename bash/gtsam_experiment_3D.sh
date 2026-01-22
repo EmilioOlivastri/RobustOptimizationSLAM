@@ -1,13 +1,14 @@
 #!/bin/bash
-path2_datasets="/home/slam-emix/Datasets/BACK_END/3D"
+path2_datasets="/home/slam-emix/Datasets/BACK_END/3D/"
 dataset_list="TUM_FR1_DESK KITTI_05 KITTI_00"
 outliers="10 20 30 40 50 60 70 80 90 100"
 monte_runs="00 01 02 03 04 05 06 07 08 09"
-date="210823"
+date="301124"
 
 # GTSAM related solutions
 gtsam_opt="GTSAM"
-gtsam_list="HUBER DCS GNC PCM"
+gtsam_list="GNC"
+#gtsam_list="HUBER DCS GNC PCM"
 
 path_exec="../build/robust_gtsam"
 cd ${path_exec}

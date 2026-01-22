@@ -12,6 +12,7 @@ void readConfig(const std::string& cfg_filepath, Config& out_cfg)
     out_cfg.maxiters = config["max_iters"].as<int>();
     out_cfg.inlier_th = config["inlier_th"].as<double>();
     out_cfg.alpha = config["alpha"].as<double>();
+    out_cfg.init_loop = config["init_loop"].as<bool>();
 
     return;
 }
