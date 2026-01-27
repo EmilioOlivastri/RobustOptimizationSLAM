@@ -28,9 +28,9 @@ int main(int argc, char **argv)
 	int nIter = 50;
 
 	g2o::SparseOptimizer optimizer;
-	auto linearSolver = g2o::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+	auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 	linearSolver->setBlockOrdering(false);
-	auto blockSolver = g2o::make_unique<BlockSolverX>(std::move(linearSolver));
+	auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
 	g2o::OptimizationAlgorithmGaussNewton *solverGauss = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
 	optimizer.setAlgorithm(solverGauss);
 	optimizer.load(input_dataset.c_str());
