@@ -108,6 +108,23 @@ ${GLOG_LIBRARY}
 rrrlib
 )
 
+
+add_executable(g2o_GNC_2D
+src/gnc_2D.cpp
+src/utils.cpp
+)
+
+target_link_libraries(g2o_GNC_2D
+${G2O_TYPES_SLAM3D}
+${G2O_TYPES_DATA}
+${G2O_CORE_LIBRARY}
+${G2O_STUFF_LIBRARY}
+${G2O_SOLVER_EIGEN}
+${YAML_CPP_LIBRARIES}
+${GLOG_LIBRARY}
+gncg2olib
+)
+
 add_executable(g2o_dataset_enhancer 
 src/dataset_enhancer.cpp 
 src/utils.cpp)

@@ -66,17 +66,22 @@ int main(int argc, char **argv)
   NonlinearFactorGraph nfg = *graph;
   addPrior2D(nfg);
 
-  LevenbergMarquardtParams lmParams;
+  //LevenbergMarquardtParams lmParams;
+  GaussNewtonParams lmParams;
   lmParams.setMaxIterations(maxIterations);
-  lmParams.setVerbosityLM("SUMMARY");
-  //lmParams.setVerbosity("ERROR");
-  LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
+  lmParams.setRelativeErrorTol(-1e+20);
+  lmParams.setAbsoluteErrorTol(-1e+20);
+  //lmParams.setVerbosityLM("SUMMARY");
+  lmParams.setVerbosity("ERROR");
+  //LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
+  GaussNewtonOptimizer lm(nfg, new_init, lmParams);
 
   std::cout << "Optimizing the factor graph" << std::endl;
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   Values result = lm.optimize();
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
+  std::cout << "-------------------" << std::endl;
 
   int dof = 3;
   double barcSq = 0.5 * Chi2inv(alpha, dof);
@@ -115,10 +120,15 @@ int main(int argc, char **argv)
     if ( v > barcSq) nfg.remove(real_idx);
   }
 
-  LevenbergMarquardtParams lmParams_ref;
+  GaussNewtonParams lmParams_ref;
+  //LevenbergMarquardtParams lmParams_ref;
   lmParams_ref.setMaxIterations(maxIterations);
-  lmParams_ref.setVerbosityLM("SUMMARY");
-  LevenbergMarquardtOptimizer lm_ref(nfg, new_init, lmParams_ref);
+  //lmParams_ref.setRelativeErrorTol(-1e+20);
+  //lmParams_ref.setAbsoluteErrorTol(-1e+20);
+  //lmParams_ref.setVerbosityLM("SUMMARY");
+  lmParams_ref.setVerbosity("ERROR");
+  GaussNewtonOptimizer lm_ref(nfg, new_init, lmParams_ref);
+  //LevenbergMarquardtOptimizer lm_ref(nfg, new_init, lmParams_ref);
   Values result_lm = lm_ref.optimize();
   //Values result_lm = result;
 

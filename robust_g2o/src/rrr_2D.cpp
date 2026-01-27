@@ -51,7 +51,8 @@ int main(int argc, char **argv)
 	rrr.robustify();
 	rrr.removeIncorrectLoops();
 	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
-  	optimizer.initializeOptimization();
+  	optimizer.setVerbose(true);
+	optimizer.initializeOptimization();
   	optimizer.optimize(maxIterations);
   	chrono::steady_clock::time_point end = chrono::steady_clock::now();
   	chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
