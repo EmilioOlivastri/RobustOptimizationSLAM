@@ -6,11 +6,12 @@ SET(CMAKE_BUILD_TYPE Release)
 include_directories(
   include
   ${EIGEN_INCLUDE_DIR}
-  "/usr/include/eigen3"
+  "/usr/local/include/eigen3"
   ${G2O_INCLUDE_DIR}
 )
 
 add_library(gncg2olib SHARED
+src/gnc_kernel_impl.cpp
 src/gnc_sparse_optimizer.cpp)
 
 target_link_libraries(gncg2olib

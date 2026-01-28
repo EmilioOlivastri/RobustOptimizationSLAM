@@ -1,5 +1,10 @@
 #include "utils.hpp"
 #include "graduatedNonConvexity/include/gnc_sparse_optimizer.hpp"
+#include "g2o/core/sparse_optimizer.h"
+#include "g2o/core/block_solver.h"
+#include "g2o/core/factory.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
+#include "g2o/solvers/eigen/linear_solver_eigen.h"
 
 using namespace std;
 using namespace g2o;
@@ -29,21 +34,55 @@ int main(int argc, char** argv)
   int maxIterations = cfg.maxiters;
   double inlier_th = cfg.inlier_th;
   int inliers = cfg.canonic_inliers;
-  double maxmix_weight = cfg.maxmix_weight;
-  double nu_constraints = cfg.nu_constraints;
-  double nu_nullHypothesis = cfg.nu_nullHypothesis;
 
-  // create the optimizer to load the data and carry out the optimization
-  GNCSparseOptimizer optimizer;
-  setProblem<SE2, EdgeSE2, VertexSE2>(input_dataset, optimizer, init_poses, v_poses);
-  
-  /**
-  std::cout << "Starting optimization : " << std::endl;
+  // GNC Specific Parameters
+  int inner_iterations = 10;
+  double mu_step = 1.4;
+
+  // For GNC I use the Gauss-Newton optimizer
+  auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+	linearSolver->setBlockOrdering(false);
+	auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
+	OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
+	
+  // Create GNC optimizer
+  GNCSparseOptimizer optimizer(GncLossType::TLS);
+  //SparseOptimizer optimizer;
+  optimizer.setAlgorithm(solverGauss);
+  optimizer.load(input_dataset.c_str());
+  odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
+  optimizer.vertex(0)->setFixed(true);
   optimizer.initializeOptimization();
+
+  /* Set GNC parameters */
+
+  std::cout << "GNC parameters: inlier_th = " << inlier_th 
+            << ", inner_iterations = " << inner_iterations
+            << ", mu_step = " << mu_step << std::endl;
+
+  optimizer.setAlpha(inlier_th);
+  optimizer.setInnerIterations(inner_iterations);
+  optimizer.setMuStep(mu_step);
+
+  // Set odometry edges as inliers
+  OptimizableGraph::EdgeContainer odometry_edges;
+  getOdometryEdges<EdgeSE2, VertexSE2>(optimizer, odometry_edges);
+  optimizer.setKnownInliers(odometry_edges);
+  /* Set GNC parameters */
+
+  optimizer.computeActiveErrors();
+  double initial_chi2 = optimizer.activeChi2();
+
+  std::cout << "Starting optimization : " << std::endl;
+  std::cout << "Initial chi2: " << initial_chi2 << std::endl;
+  //optimizer.setVerbose(true);
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-  optimizer.optimize(maxIterations);
+  int total_iterations = optimizer.optimize(maxIterations, false);
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
   chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
+  
+
+  /**
 
   int tp  = 0; int tn = 0; int fp  = 0; int fn = 0; 
   for ( size_t idx = 0; idx < inliers; ++idx)
@@ -57,8 +96,11 @@ int main(int argc, char** argv)
     if ( e2add[idx]->isOutlier() ) ++tn;
     else ++fp;
   }
-  
-  std::cout << "Optimtization Concluded!" << std::endl;
+  /** */
+
+  std::cout << "Optimization Concluded in: " << total_iterations << std::endl;
+  std::cout << "Time taken for optimization: " << delta_time.count() / 1000000.0 << " seconds" << std::endl;
+  std::cout << "Final chi2: " << optimizer.activeRobustChi2() << std::endl;
 
   ofstream outfile;
   string output_file_trj = cfg.output;
@@ -70,6 +112,7 @@ int main(int argc, char** argv)
   }
   outfile.close();
 
+  /**
   float precision = tp / (float)(tp + fp);
   float recall    = tp / (float)(tp + fn); 
   float dt = delta_time.count() / 1000000.0;
@@ -90,6 +133,7 @@ int main(int argc, char** argv)
   outfile << dt << endl;
   outfile.close();
   /**/
+  optimizer.clear();
 
   return 0;
 }

@@ -52,39 +52,32 @@ public:
   GNCSparseOptimizer();
   ~GNCSparseOptimizer();
 
-  /**returns the cached chi2 of the active portion of the graph*/
-  number_t activeChi2() const;
-  /**
-   * returns the cached chi2 of the active portion of the graph.
-   * In contrast to activeChi2() this functions considers the weighting
-   * of the error according to the robustification of the error functions.
-   */
-  number_t activeRobustChi2() const;
-
-  void computeActiveErrors();
-
   int optimize(int iterations, bool online);
 
-  void setKnownInliers(OptimizableGraph::EdgeSet& inliers);
-  void setInlierProbabilityTh(double p);
+  void setKnownInliers(EdgeContainer& inliers);
   void setInnerIterations(int iterations);
-  void setMuStep(double mu);
+  void setMuStep(double mu_step);
+  void setAlpha(const double alpha);
+  int defaultOptimize(bool online);
   void clear();
 
  private:
     
     double initializeMu() const;
-    double updateMu() const;
+    void initializeKernels(const double mu);
+    double updateMu(const double mu) const;
     bool checkMuConvergence(const double mu) const;
+    bool checkConvergence(const double mu, const double cost, const double prev_cost) const;
     bool checkCostConvergence(const double cost, const double prev_cost) const;
     bool checkKernelConvergence() const;    
     void updateKernels(const double mu);
+    double computeResidual(OptimizableGraph::Edge* edge);
 
-    int defaultOptimize(bool online);
-
-    OptimizableGraph::EdgeSet egrad_; // edges with robust estimator
+    EdgeContainer egrad_; // edges with robust estimator
     double inlier_th_;
     int inner_iters_ = 100;
+
+    double alpha_;
 
     GncLossType lossType_ = GncLossType::TLS;  ///< Default loss
     double muStep_ = 1.4;  ///< Multiplicative factor to reduce/increase the mu in gnc

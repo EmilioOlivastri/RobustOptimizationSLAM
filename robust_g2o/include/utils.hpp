@@ -14,6 +14,7 @@
 #include "g2o/stuff/command_args.h"
 #include "g2o/types/slam2d/types_slam2d.h"
 #include "g2o/types/slam3d/types_slam3d.h"
+#include "g2o/core/optimizable_graph.h"
 
 
 struct Config
@@ -43,6 +44,10 @@ void setProblem(const std::string& problem_file,
                 g2o::SparseOptimizer& optimizer,
                 std::vector<T>& init_poses,
                 std::vector<VERTEX*>& v_poses);
+
+
+template <class EDGE, class VERTEX>
+void getOdometryEdges(const g2o::SparseOptimizer& optimizer, g2o::OptimizableGraph::EdgeContainer& odometry_edges);
 
 void writeVertex(std::ofstream& out_data, g2o::VertexSE2* v);
 void writeVertex(std::ofstream& out_data, g2o::VertexSE3* v);
