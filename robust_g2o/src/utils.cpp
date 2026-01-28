@@ -103,6 +103,35 @@ template void odometryInitialization<EdgeSE2, VertexSE2>(SparseOptimizer& optimi
 template void odometryInitialization<EdgeSE3, VertexSE3>(SparseOptimizer& optimizer);
 /*-------------------------------------------------------------------*/
 
+
+template <class EDGE, class VERTEX>
+void getOdometryEdges(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& odometry_edges)
+{
+    // Clearing any previous data
+    odometry_edges.clear();
+
+    // Iterating trough the edges
+    for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
+    {
+        auto edge = dynamic_cast<EDGE*>(*it_e);
+        if ( edge == nullptr ) continue;
+        
+        int id_st = dynamic_cast<VERTEX*>(edge->vertices()[1])->id();
+        int id_fn = dynamic_cast<VERTEX*>(edge->vertices()[0])->id();
+
+        if (abs(id_fn - id_st) != 1) continue;
+
+        odometry_edges.push_back(edge);
+    }
+
+    return;
+}
+
+template void getOdometryEdges<EdgeSE2, VertexSE2>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& odometry_edges);
+template void getOdometryEdges<EdgeSE3, VertexSE3>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& odometry_edges);
+/*-------------------------------------------------------------------*/
+
+
 template <class T>
 void readSolutionFile(vector<T>& poses, const string& path)
 {
@@ -143,7 +172,7 @@ void writeVertex(ofstream& out_data, VertexSE3* v)
 {
     Isometry3d pose = v->estimate();
     Quaterniond q(pose.linear());
-    Vector3d eul = pose.linear().eulerAngles(0, 1, 2);
+    Vector3d eul = pose.linear().canonicalEulerAngles(0, 1, 2);
     Vector3d t = pose.translation();
 
     out_data << t[0] << " " << t[1] << " " << t[2] << " "

@@ -72,11 +72,27 @@ GNCSparseOptimizer::~GNCSparseOptimizer() {}
 int GNCSparseOptimizer::optimize(int iterations, bool online) 
 {
   // Compute solution for the convex approximation of the problem
+  double cost_init_guess = activeChi2();
+  push();
   int total_iterations = defaultOptimize(online);
 
   // Compute GNC parameters from the current state of the system
   computeActiveErrors();
   double prev_cost = activeChi2();
+
+  if (cost_init_guess < prev_cost)
+  {
+    pop();
+    prev_cost = cost_init_guess;
+    push();
+    computeActiveErrors();
+  }
+  else
+  {
+    // Discard the initial guess and push the new solution
+    discardTop();
+    push();
+  }
 
   double cost = 0.0;
   double mu = initializeMu();
@@ -104,6 +120,20 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
     if ( checkConvergence(mu, cost, prev_cost) )
       return gnc_iter + 1;
 
+    if (cost > prev_cost)
+    {
+      pop();
+      cost = prev_cost;
+      push();
+      computeActiveErrors();
+    }
+    else
+    {
+      // Discard the initial guess and push the new solution
+      discardTop();
+      push();
+    }
+
     // Update all the variables for the next iteration
     mu = updateMu(mu);
     updateKernels(mu);
@@ -129,8 +159,6 @@ void GNCSparseOptimizer::setMuStep(double mu_step)
 // Function needs to be called after initializeOptimization
 void GNCSparseOptimizer::setKnownInliers(EdgeContainer& inliers)
 {
-
-  std::cout << "Setting the known inliers in GNC " << std::endl;
   for (size_t idx = 0; idx < _activeEdges.size(); ++idx)
   {
     OptimizableGraph::Edge* e_active = _activeEdges[idx];
@@ -144,7 +172,6 @@ void GNCSparseOptimizer::setKnownInliers(EdgeContainer& inliers)
     egrad_.push_back(e_active);
 
   }
-  std::cout << "The active edges are " << _activeEdges.size() << " and the inliers are " << inliers.size() << std::endl;
 
   return;
 }
@@ -265,6 +292,7 @@ bool GNCSparseOptimizer::checkMuConvergence(const double mu) const
   return false;
 }
 
+// TODO: Check if enabling this improves speed while maintaining accuracy
 bool GNCSparseOptimizer::checkCostConvergence(const double cost, const double prev_cost) const
 {
   //return std::fabs(cost - prev_cost) / std::max(prev_cost, 1e-7) < 1e-4;
@@ -280,6 +308,8 @@ bool GNCSparseOptimizer::checkKernelConvergence() const
     {
       // Check convergence of weights to binary values.
       double max_weight = 0.0;
+      double tot = 0.0;
+      std::cout << "Checking kernel convergence over " << egrad_.size() << " edges." << std::endl;
       for (int idx = 0; idx < static_cast<int>(egrad_.size()); ++idx)
       {
         OptimizableGraph::Edge* e = egrad_[idx];
@@ -289,6 +319,10 @@ bool GNCSparseOptimizer::checkKernelConvergence() const
         
         // Converged when all weights are close to binary values
         double weight = rho[1];
+        if (weight < 0.0)
+          std::cout << "Edge " << idx << " weight: " << weight << " delta:" << rk->delta() << std::endl;
+        
+          tot += weight;
         max_weight = std::max(max_weight, weight);
         if ( std::fabs(weight - std::round(weight)) < weightsTol_ ) 
           continue;
@@ -296,7 +330,8 @@ bool GNCSparseOptimizer::checkKernelConvergence() const
         return false;
       }
       // Return true only if it gets through all edges successfully
-      std::cout << "GNC TLS: Kernel weights have converged to binary values: " << max_weight << std::endl;
+      std::cout << "GNC TLS: Kernel weights have converged to binary values: " << max_weight 
+      << " (total weight: " << tot << ")" << std::endl;
       return true;
     }
     // no kernel convergence criterion for GM

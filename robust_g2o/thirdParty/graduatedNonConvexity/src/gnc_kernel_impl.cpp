@@ -21,7 +21,7 @@ void RobustMuTLS::robustify(double e2, Vector3& rho) const
   else if (e2 > lower_bound && e2 < upper_bound) 
   {  
     rho[0] = 2 * std::sqrt(_delta * _mu * e2 * (_mu + 1.0)) - _mu * (_delta + e2);
-    rho[1] = std::sqrt(_delta * _mu * ((_mu + 1.0))) / e2 - _mu;
+    rho[1] = std::sqrt(_delta * _mu * ((_mu + 1.0)) / e2)  - _mu;
     rho[2] = -2.0 * std::sqrt(_delta * _mu * ((_mu + 1.0))) / (e2 * e2);
   }
   else if (e2 >= upper_bound) 
