@@ -68,13 +68,59 @@ GNCSparseOptimizer::GNCSparseOptimizer()
 
 GNCSparseOptimizer::~GNCSparseOptimizer() {}
 
-
+// Default GNC optimization
 int GNCSparseOptimizer::optimize(int iterations, bool online) 
+{
+  // Compute solution for the convex approximation of the problem
+  //int total_iterations = defaultOptimize(online);
+
+  // Compute GNC parameters from the current state of the system
+  computeActiveErrors();
+  double prev_cost = activeChi2();
+  double cost = 0.0;
+  double mu = initializeMu();
+  double best_mu = mu;
+  initializeKernels(mu);
+
+  // Degenerate case where all residuals are below the threshold
+  if (mu <= 0.0 ) 
+    return 0;
+
+  for (int gnc_iter = 0; gnc_iter < iterations; ++gnc_iter)
+  {
+    // Optimize the cost with the current robust kernels
+    int total_iterations = defaultOptimize(online);
+
+    // Compute current cost
+    computeActiveErrors();
+    cost = activeRobustChi2();
+
+    std::cout << "GNC iteration " << gnc_iter + 1 << " : mu = " << mu 
+              << ", cost = " << std::setprecision(12) << cost 
+              << ", prev_cost = " << std::setprecision(12) << prev_cost 
+              << ", GN iterations = "  << total_iterations << std::endl;
+
+    // Check convergence
+    if ( checkConvergence(mu, cost, prev_cost) )
+      return gnc_iter + 1;
+
+    // Update all the variables for the next iteration
+    mu = updateMu(mu);
+    updateKernels(mu);
+    prev_cost = cost;
+  }
+
+  return iterations;
+}
+
+// Optimization that uses the previous estimate only if it improves the cost
+int GNCSparseOptimizer::optimizeX(int iterations, bool online) 
 {
   // Compute solution for the convex approximation of the problem
   double cost_init_guess = activeChi2();
   push();
-  int total_iterations = defaultOptimize(online);
+
+  //int total_iterations = defaultOptimize(online);
 
   // Compute GNC parameters from the current state of the system
   computeActiveErrors();
@@ -96,6 +142,7 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
 
   double cost = 0.0;
   double mu = initializeMu();
+  double best_mu = mu;
   initializeKernels(mu);
 
   // Degenerate case where all residuals are below the threshold
@@ -105,20 +152,18 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
   for (int gnc_iter = 0; gnc_iter < iterations; ++gnc_iter)
   {
     // Optimize the cost with the current robust kernels
-    total_iterations = defaultOptimize(online);
+    int total_iterations = defaultOptimize(online);
 
     // Compute current cost
     computeActiveErrors();
     cost = activeRobustChi2();
+    double non_robust_cost = activeChi2();
 
     std::cout << "GNC iteration " << gnc_iter + 1 << " : mu = " << mu 
-              << ", cost = " << std::setprecision(12) << cost 
+              << ", cost = " << std::setprecision(12) << cost
+              << ", non_robust_cost = " << std::setprecision(12) << non_robust_cost
               << ", prev_cost = " << std::setprecision(12) << prev_cost 
               << ", GN iterations = "  << total_iterations << std::endl;
-
-    // Check convergence
-    if ( checkConvergence(mu, cost, prev_cost) )
-      return gnc_iter + 1;
 
     if (cost > prev_cost)
     {
@@ -133,6 +178,10 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
       discardTop();
       push();
     }
+
+    // Check convergence
+    if ( checkConvergence(mu, cost, prev_cost) )
+      return gnc_iter + 1;
 
     // Update all the variables for the next iteration
     mu = updateMu(mu);
@@ -297,6 +346,39 @@ bool GNCSparseOptimizer::checkCostConvergence(const double cost, const double pr
 {
   //return std::fabs(cost - prev_cost) / std::max(prev_cost, 1e-7) < 1e-4;
   return false;
+}
+
+bool GNCSparseOptimizer::isEdgeInlier(const int idx)
+{
+  // Check index bounds
+  if (idx < 0 || idx >= static_cast<int>(egrad_.size()))
+    throw std::runtime_error("GncOptimizer::isEdgeInlier: index out of bounds.");
+  
+  OptimizableGraph::Edge* e = egrad_[idx];
+  RobustKernel* rk = e->robustKernel();
+  Vector3 rho;
+  rk->robustify(e->chi2(), rho);
+  double weight = rho[1];
+  double residual = computeResidual(e);
+  /**
+  std::cout << "RHO: " << rho.transpose() << std::endl;
+  std::cout << "Edge " << idx << " weight: " << weight << " delta:" << rk->delta() << " residual:" << residual << " chi2:" << e->chi2() << std::endl;
+  if (lossType_ == GncLossType::TLS)
+    std::cout << " mu: " << static_cast<RobustMuTLS*>(rk)->getMu() << std::endl;
+  else
+  {
+    double delta = rk->delta();
+    double e2 = e->chi2();
+    double mu = static_cast<RobustMuGM*>(rk)->getMu();
+    const double k = mu * delta;
+    const double aux = 1. / (k + e2);
+    double robust_chi2 = k * e2 * aux;
+    double w = k * k * aux * aux;
+    std::cout << " mu: " << mu << " robust_chi2: " << robust_chi2 << " weight: " << w << std::endl;
+  }
+  /**/
+  return weight > 0.5; // consider inlier if weight is closer to 1 than to 0
+  
 }
 
 // TODO: FINISH THIS FUNCTION

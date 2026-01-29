@@ -44,7 +44,7 @@ void RobustMuGM::robustify(double e2, Vector3& rho) const
   const double k = _mu * _delta;
   const double aux = 1. / (k + e2);
   rho[0] = k * e2 * aux;
-  rho[1] = k * aux * aux;
+  rho[1] = k * k * aux * aux;
   rho[2] = -2. * rho[1] * aux;
 }
 

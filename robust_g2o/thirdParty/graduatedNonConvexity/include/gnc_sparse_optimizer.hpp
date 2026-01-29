@@ -53,12 +53,14 @@ public:
   ~GNCSparseOptimizer();
 
   int optimize(int iterations, bool online);
+  int optimizeX(int iterations, bool online);
 
   void setKnownInliers(EdgeContainer& inliers);
   void setInnerIterations(int iterations);
   void setMuStep(double mu_step);
   void setAlpha(const double alpha);
   int defaultOptimize(bool online);
+  bool isEdgeInlier(const int idx);
   void clear();
 
  private:

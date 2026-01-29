@@ -1,14 +1,15 @@
-set(G2O_ROOT /home/slam-emix/Workspace/lib/g2o)
+set(G2O_ROOT /home/slamemix/Workspace/libs/g2o)
 
 find_package(G2O REQUIRED)
 find_package (glog)
+find_package(yaml-cpp REQUIRED)
 
 add_subdirectory(thirdParty)
 
 include_directories(
   include
   ${EIGEN_INCLUDE_DIR}
-  "/usr/include/eigen3"
+  "/usr/local/include/eigen3"
   ${G2O_INCLUDE_DIR}
   ${YAML_CPP_INCLUDE_DIR}
   thirdParty
@@ -30,7 +31,7 @@ target_link_libraries(g2o_MAXMIX_2D
   ${G2O_STUFF_LIBRARY}
   ${G2O_SOLVER_EIGEN}
   glog
-  ${YAML_CPP_LIBRARIES}
+  yaml-cpp::yaml-cpp
 )
 
 target_link_libraries(g2o_MAXMIX_3D
@@ -41,7 +42,7 @@ target_link_libraries(g2o_MAXMIX_3D
   ${G2O_STUFF_LIBRARY}
   ${G2O_SOLVER_EIGEN}
   glog
-  ${YAML_CPP_LIBRARIES}
+  yaml-cpp::yaml-cpp
 )
 
 add_executable(g2o_SC_2D
@@ -55,7 +56,7 @@ ${G2O_TYPES_DATA}
 ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_SOLVER_EIGEN}
-${YAML_CPP_LIBRARIES}
+yaml-cpp::yaml-cpp
 ${GLOG_LIBRARY}
 switchlib
 )
@@ -71,7 +72,7 @@ ${G2O_TYPES_DATA}
 ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_SOLVER_EIGEN}
-${YAML_CPP_LIBRARIES}
+yaml-cpp::yaml-cpp
 ${GLOG_LIBRARY}
 switchlib
 )
@@ -87,7 +88,7 @@ ${G2O_TYPES_DATA}
 ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_SOLVER_EIGEN}
-${YAML_CPP_LIBRARIES}
+yaml-cpp::yaml-cpp
 ${GLOG_LIBRARY}
 rrrlib
 )
@@ -103,7 +104,7 @@ ${G2O_TYPES_DATA}
 ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_SOLVER_EIGEN}
-${YAML_CPP_LIBRARIES}
+yaml-cpp::yaml-cpp
 ${GLOG_LIBRARY}
 rrrlib
 )
@@ -120,7 +121,24 @@ ${G2O_TYPES_DATA}
 ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_SOLVER_EIGEN}
-${YAML_CPP_LIBRARIES}
+yaml-cpp::yaml-cpp
+${GLOG_LIBRARY}
+gncg2olib
+)
+
+
+add_executable(g2o_GNC_3D
+src/gnc_3D.cpp
+src/utils.cpp
+)
+
+target_link_libraries(g2o_GNC_3D
+${G2O_TYPES_SLAM3D}
+${G2O_TYPES_DATA}
+${G2O_CORE_LIBRARY}
+${G2O_STUFF_LIBRARY}
+${G2O_SOLVER_EIGEN}
+yaml-cpp::yaml-cpp
 ${GLOG_LIBRARY}
 gncg2olib
 )
@@ -138,7 +156,7 @@ target_link_libraries(g2o_dataset_enhancer
   ${G2O_STUFF_LIBRARY}
   ${G2O_SOLVER_EIGEN}
   glog
-  ${YAML_CPP_LIBRARIES}
+  yaml-cpp::yaml-cpp
 )
 
 add_executable(g2o_dataset_seeder 
@@ -154,7 +172,7 @@ target_link_libraries(g2o_dataset_seeder
   ${G2O_STUFF_LIBRARY}
   ${G2O_SOLVER_EIGEN}
   glog
-  ${YAML_CPP_LIBRARIES}
+  yaml-cpp::yaml-cpp
 )
 
 
@@ -170,5 +188,5 @@ target_link_libraries(g2o_noise_applier_2D
   ${G2O_STUFF_LIBRARY}
   ${G2O_SOLVER_EIGEN}
   glog
-  ${YAML_CPP_LIBRARIES}
+  yaml-cpp::yaml-cpp
 )
