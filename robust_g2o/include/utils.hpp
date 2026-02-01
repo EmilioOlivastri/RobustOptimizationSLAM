@@ -48,6 +48,8 @@ void setProblem(const std::string& problem_file,
 
 template <class EDGE, class VERTEX>
 void getOdometryEdges(const g2o::SparseOptimizer& optimizer, g2o::OptimizableGraph::EdgeContainer& odometry_edges);
+template <class EDGE, class VERTEX>
+void getLoopEdges(const g2o::SparseOptimizer& optimizer, g2o::OptimizableGraph::EdgeContainer& loop_edges);
 
 void writeVertex(std::ofstream& out_data, g2o::VertexSE2* v);
 void writeVertex(std::ofstream& out_data, g2o::VertexSE3* v);
@@ -57,3 +59,7 @@ void readSolutionFile(std::vector<T>& poses, const std::string& path);
 void readConfig(const std::string& cfg_filepath, Config& out_cfg);
 void readLine(std::ifstream& in_data, Eigen::Isometry2d& pose); 
 void readLine(std::ifstream& in_data, Eigen::Isometry3d& pose);
+
+void opencv2XYZ(g2o::SparseOptimizer& optimizer);
+void correctedInformationMatrices(g2o::SparseOptimizer& optimizer);
+void scaleTrajectory(g2o::SparseOptimizer& optimizer, const double scale);

@@ -48,10 +48,11 @@ int main(int argc, char** argv)
 	OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
 	
   // Create GNC optimizer
-  GNCSparseOptimizer optimizer(GncLossType::GM);
+  GNCSparseOptimizer optimizer(GncLossType::TLS);
   optimizer.setAlgorithm(solverGauss);
   optimizer.load(input_dataset.c_str());
-  odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
+  correctedInformationMatrices(optimizer);
+  //odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
   optimizer.vertex(0)->setFixed(true);
   optimizer.initializeOptimization();
 
@@ -66,7 +67,9 @@ int main(int argc, char** argv)
 
   // Set odometry edges as inliers
   OptimizableGraph::EdgeContainer odometry_edges, loop_edges;
+  OptimizableGraph::EdgeSet inlier_edges;
   getOdometryEdges<EdgeSE3, VertexSE3>(optimizer, odometry_edges);
+  getLoopEdges<EdgeSE3, VertexSE3>(optimizer, loop_edges);
   int n_loops = optimizer.edges().size() - odometry_edges.size();
   optimizer.setKnownInliers(odometry_edges);
   /* Set GNC parameters */
@@ -77,6 +80,7 @@ int main(int argc, char** argv)
   std::cout << "Starting optimization : " << std::endl;
   std::cout << "Initial chi2: " << initial_chi2 << std::endl;
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
+  optimizer.push();
   optimizer.setVerbose(true);
   int total_iterations = optimizer.optimize(maxIterations, false);
   //int total_iterations = optimizer.defaultOptimize(false);
@@ -87,29 +91,36 @@ int main(int argc, char** argv)
   std::cout << "Time taken for optimization: " << delta_time.count() / 1000000.0 << " seconds" << std::endl;
   std::cout << "Final chi2: " << optimizer.activeRobustChi2() << std::endl;
 
-  ofstream outfile;
-  string output_file_trj = cfg.output;
-  outfile.open(output_file_trj.c_str()); 
-  for (size_t it = 0; it < optimizer.vertices().size(); ++it )
-  {
-      VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
-      writeVertex(outfile, v);
-  }
-  outfile.close();
-
   /* Check inliers/outlier state */
   int tp  = 0; int tn = 0; int fp  = 0; int fn = 0; 
   for ( size_t idx = 0; idx < inliers; ++idx)
   {
-    if ( optimizer.isEdgeInlier(idx) ) ++tp;
+    if ( optimizer.isEdgeInlier(idx) ) 
+    {
+      inlier_edges.insert(loop_edges[idx]);
+      ++tp;
+    }
     else ++fn;
   }
 
   for ( size_t idx = inliers; idx < n_loops; ++idx)
   {
     if ( !optimizer.isEdgeInlier(idx) ) ++tn;
-    else ++fp;
+    else
+    {
+      std::cout << "False Positive: E[" << loop_edges[idx]->vertices()[0]->id() << ", " << loop_edges[idx]->vertices()[1]->id() << "]" << std::endl;
+      inlier_edges.insert(loop_edges[idx]);
+      ++fp;
+    } 
   }
+
+  for ( size_t e_id = 0; e_id < odometry_edges.size(); inlier_edges.insert(odometry_edges[e_id++]) );
+
+  /**
+  optimizer.pop();
+  optimizer.initializeOptimization(inlier_edges);
+  optimizer.defaultOptimize(10);
+  /**/
 
   float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
   float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0;
@@ -123,6 +134,16 @@ int main(int argc, char** argv)
   std::cout << "TN = " << tn << std::endl;
   std::cout << "FP = " << fp << std::endl;
   std::cout << "FN = " << fn << std::endl;
+
+  ofstream outfile;
+  string output_file_trj = cfg.output;
+  outfile.open(output_file_trj.c_str()); 
+  for (size_t it = 0; it < optimizer.vertices().size(); ++it )
+  {
+      VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
+      writeVertex(outfile, v);
+  }
+  outfile.close();
 
 
   string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";

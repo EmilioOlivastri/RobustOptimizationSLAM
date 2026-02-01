@@ -42,7 +42,8 @@ void setProblem(const string& problem_file,
     
     // allocate the solver
     OptimizationAlgorithmProperty solverProperty;
-    optimizer.setAlgorithm(OptimizationAlgorithmFactory::instance()->construct("dl_var", solverProperty));
+    //optimizer.setAlgorithm(OptimizationAlgorithmFactory::instance()->construct("dl_var", solverProperty));
+    optimizer.setAlgorithm(OptimizationAlgorithmFactory::instance()->construct("gn_var", solverProperty));
     
     // Loading the g2o file
     ifstream ifs(problem_file.c_str());
@@ -256,6 +257,91 @@ void readConfig(const std::string& cfg_filepath, Config& out_cfg)
     out_cfg.nu_constraints = config["nu_constraint"].as<double>();
     out_cfg.nu_nullHypothesis = config["nu_nullHypothesis"].as<double>();
 
+
+    return;
+}
+
+void opencv2XYZ(SparseOptimizer& optimizer)
+{
+    // Trabsforming from OpenCV to XYZ convention
+    Eigen::Matrix3d R_cv;
+    R_cv << 0.0, -1.0,  0.0,
+            0.0,  0.0, -1.0,
+            1.0,  0.0,  0.0;
+    Eigen::Vector3d t_cv = Eigen::Vector3d::Zero();
+    Eigen::Isometry3d T_cv = Eigen::Isometry3d::Identity();
+    T_cv.linear() = R_cv;
+    T_cv.translation() = t_cv;
+
+    for ( auto it = optimizer.vertices().begin() ; it != optimizer.vertices().end() ; ++it )
+    {
+        auto v = dynamic_cast<VertexSE3*>(it->second);
+        Eigen::Isometry3d pose = v->estimate();
+        Eigen::Isometry3d new_pose = T_cv.inverse() * pose * T_cv;
+        v->setEstimate(new_pose);
+    }
+
+    for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
+    {
+        auto edge = dynamic_cast<EdgeSE3*>(*it_e);
+        Eigen::Isometry3d meas = edge->measurement();
+        Eigen::Isometry3d new_meas = T_cv.inverse() * meas * T_cv;
+        edge->setMeasurement(new_meas);
+
+        Eigen::Matrix<double, 6, 6> info = edge->information();
+        Eigen::Matrix<double, 6, 6> rotated_info = Eigen::Matrix<double, 6, 6>::Zero();
+        rotated_info.block<3,3>(0,0) = R_cv.transpose() * info.block<3,3>(0,0) * R_cv;
+        rotated_info.block<3,3>(0,3) = R_cv.transpose() * info.block<3,3>(0,3) * R_cv;
+        rotated_info.block<3,3>(3,0) = R_cv.transpose() * info.block<3,3>(3,0) * R_cv;
+        rotated_info.block<3,3>(3,3) = R_cv.transpose() * info.block<3,3>(3,3) * R_cv;
+        edge->setInformation(rotated_info);
+    }  
+
+
+    return;
+}
+
+void correctedInformationMatrices(g2o::SparseOptimizer& optimizer)
+{
+    for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
+    {
+        auto edge = dynamic_cast<EdgeSE3*>(*it_e);
+        if ( edge == nullptr ) continue;
+
+        Eigen::Matrix<double, 6, 6> info = Eigen::Matrix<double, 6, 6>::Zero();
+
+        // Correcting translation part
+        info(0, 0) = 450.0;  // TUM: 100.0  | KITTI_05: 450.0
+        info(1, 1) = 400.0;   // TUM: 80.0  | KITTI_05: 200.0
+        info(2, 2) = 2000.0; // TUM: 2000.0 | KITTI_05: 2000.0
+        // Correcting rotation part
+        info(3, 3) = 2000.0; // TUM: 1000.0 | KITTI_05: 2000.0
+        info(4, 4) = 2000.0; // TUM: 1000.0 | KITTI_05: 2000.0
+        info(5, 5) = 250.0;  // TUM: 100.0  | KITTI_05: 100.0
+        edge->setInformation(info);
+    }  
+
+    return;
+}
+
+
+void scaleTrajectory(SparseOptimizer& optimizer, const double scale)
+{
+    for ( auto it = optimizer.vertices().begin() ; it != optimizer.vertices().end() ; ++it )
+    {
+        auto v = dynamic_cast<VertexSE3*>(it->second);
+        Eigen::Isometry3d pose = v->estimate();
+        pose.translation() *= scale;
+        v->setEstimate(pose);
+    }
+
+    for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
+    {
+        auto edge = dynamic_cast<EdgeSE3*>(*it_e);
+        Eigen::Isometry3d meas = edge->measurement();
+        meas.translation() *= scale;
+        edge->setMeasurement(meas);
+    }
 
     return;
 }

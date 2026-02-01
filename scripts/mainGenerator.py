@@ -2,9 +2,9 @@ import os
 
 
 def main():
-    n_loops = 60
-    dataset = "/home/slam-emix/Datasets/BACK_END/3D/TUM_FR1_DESK/graph.g2o"
-    output_dir = "/home/slam-emix/Datasets/BACK_END/3D/TUM_FR1_DESK/SPOILED_DATA/"
+    n_loops = 80
+    dataset = "/home/slam-emix/Datasets/BACK_END/3D/KITTI_00/graph.g2o"
+    output_dir = "/home/slam-emix/Datasets/BACK_END/3D/KITTI_00/SPOILED_DATA/"
     res_out = "/0"
     
     dir_idx = 10
@@ -16,6 +16,7 @@ def main():
         for idx in range(10):
             command_gen = "python3 generateDataset.py -i " + dataset + " -n " + str(n)
             os.system(command_gen)
+            print(f'Name of the final file: {output + str(idx) + ".g2o"}')
             command_ren = "mv new.g2o " + output + str(idx) + ".g2o"
             os.system(command_ren)
 

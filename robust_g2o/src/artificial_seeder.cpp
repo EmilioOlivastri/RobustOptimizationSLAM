@@ -21,7 +21,7 @@ int main(int argc, char** argv)
   
   arg.param("st", seeded_trajectory, "",
             "Trajectory with few loops used for seeding");
-  arg.param("o", outputFilename, "res.txt",
+  arg.param("o", outputFilename, "seed_traj.g2o",
             "G2o file with ehnanced loops");
   arg.parseArgs(argc, argv);
 
@@ -36,8 +36,13 @@ int main(int argc, char** argv)
 
 
   // Creating GT using the optimized trajectory
+  bool rescale = true;
+  double scale = 0.05;
   SparseOptimizer optimizer;
   setProblem<PoseType, EdgeType, VertexType>(seeded_trajectory, optimizer, init_poses, v_poses);
+  opencv2XYZ(optimizer);
+  if ( rescale ) scaleTrajectory(optimizer, scale);
+  /**
   optimizer.setVerbose(false);
   optimizer.vertex(0)->setFixed(true);
   std::cout << "Starting optimization : " << std::endl;
@@ -101,7 +106,8 @@ int main(int argc, char** argv)
       VertexType* v = dynamic_cast<VertexType*>(optimizer.vertex(it));
       v->setEstimate(init_poses[v->id()]);
   }
-  optimizer.save("seed_traj.g2o"); 
+  /**/
+  optimizer.save(outputFilename.c_str());
   
 
   return 0;
