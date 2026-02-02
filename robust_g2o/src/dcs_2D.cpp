@@ -70,7 +70,7 @@ int main(int argc, char** argv)
   // Optimize the problem
   cout << "Starting optimization with " << chi2_th << " as threshold" << endl;
   optimizer.vertex(0)->setFixed(true);
-  optimizer.setVerbose(true);
+  //optimizer.setVerbose(true);
   optimizer.initializeOptimization();
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   optimizer.optimize(maxIterations);

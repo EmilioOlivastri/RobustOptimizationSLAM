@@ -100,8 +100,8 @@ int main(int argc, char** argv)
   for ( int idx = inliers; idx < sw_vs.size(); ++idx)
       sw_vs[idx]->estimate() > inlier_th ? ++fp : ++tn;  
 
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0; 
   float dt = delta_time.count() / 1000000.0;
 
   std::cout << "Optimization complete in " << dt << " [s]" << std::endl;

@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 	rrr.robustify();
 	rrr.removeIncorrectLoops();
 	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
-  	optimizer.setVerbose(true);
+  	//optimizer.setVerbose(true);
 	optimizer.initializeOptimization();
   	optimizer.optimize(maxIterations);
   	chrono::steady_clock::time_point end = chrono::steady_clock::now();
@@ -94,8 +94,8 @@ int main(int argc, char **argv)
 		else ++fp;
 	}
 
-	float precision = tp / (float)(tp + fp);
-	float recall    = tp / (float)(tp + fn); 
+	float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
+  	float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0; 
 	float dt = delta_time.count() / 1000000.0;
 
 	std::cout << "Canonic Inliers = " << cfg.canonic_inliers << std::endl;
