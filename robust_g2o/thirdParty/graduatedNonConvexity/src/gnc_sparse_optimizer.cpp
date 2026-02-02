@@ -95,11 +95,13 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
     computeActiveErrors();
     cost = activeRobustChi2();
 
+    /**
     std::cout << "GNC iteration " << gnc_iter + 1 << " : mu = " << mu 
               << ", cost = " << std::setprecision(12) << cost 
               << ", prev_cost = " << std::setprecision(12) << prev_cost 
               << ", GN iterations = "  << total_iterations << std::endl;
-
+    /**/
+    
     // Check convergence
     if ( checkConvergence(mu, cost, prev_cost) )
       return gnc_iter + 1;
@@ -159,11 +161,13 @@ int GNCSparseOptimizer::optimizeX(int iterations, bool online)
     cost = activeRobustChi2();
     double non_robust_cost = activeChi2();
 
+    /**/
     std::cout << "GNC iteration " << gnc_iter + 1 << " : mu = " << mu 
               << ", cost = " << std::setprecision(12) << cost
               << ", non_robust_cost = " << std::setprecision(12) << non_robust_cost
               << ", prev_cost = " << std::setprecision(12) << prev_cost 
               << ", GN iterations = "  << total_iterations << std::endl;
+    /**/
 
     if (cost > prev_cost)
     {
@@ -391,7 +395,7 @@ bool GNCSparseOptimizer::checkKernelConvergence() const
       // Check convergence of weights to binary values.
       double max_weight = 0.0;
       double tot = 0.0;
-      std::cout << "Checking kernel convergence over " << egrad_.size() << " edges." << std::endl;
+      //std::cout << "Checking kernel convergence over " << egrad_.size() << " edges." << std::endl;
       for (int idx = 0; idx < static_cast<int>(egrad_.size()); ++idx)
       {
         OptimizableGraph::Edge* e = egrad_[idx];
