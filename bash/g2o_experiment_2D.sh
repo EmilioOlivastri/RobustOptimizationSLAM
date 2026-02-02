@@ -40,8 +40,6 @@ do
             done
             jobs
             wait
-            pwd
-            ls
             rm ./${tmp_folder}/*.yaml
         done
         echo "Finished "${dataset}

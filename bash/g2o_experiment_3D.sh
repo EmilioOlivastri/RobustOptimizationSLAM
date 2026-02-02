@@ -38,6 +38,7 @@ do
             done
             jobs
             wait
+            rm ./${tmp_folder}/*.yaml
         done
         echo "Finished "${dataset}
     done
