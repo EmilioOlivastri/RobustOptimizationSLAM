@@ -1,28 +1,40 @@
 #!/bin/bash
-path2_datasets="/home/slam-emix/Datasets/BACK_END/3D/"
+path2_datasets="/home/slamemix/Data/RobustSLAM/2D/"
 dataset_list="TUM_FR1_DESK KITTI_05 KITTI_00"
 outliers="10 20 30 40 50 60 70 80 90 100"
 monte_runs="00 01 02 03 04 05 06 07 08 09"
-date="301124"
+date="260202"
 
 # G2O related solutiona
 g2o_opt="G2O"
-g2o_list="MAXMIX"
+g2o_list="HUBER DCS MAXMIX RRR SC GNC"
 
 cd ../build/robust_g2o
+
+config="/home/slamemix/Workspace/RPGO/RobustOptimizationSLAM/robust_g2o/cfg/params_2D.yaml"
+tmp_folder="tmp"
 
 for algo in ${g2o_list}
 do
     for dataset in ${dataset_list}
     do
         cfg_file=${path2_datasets}${dataset}"/params.yaml"
+        cp_params=./${tmp_folder}/params.yaml
+        cp ${cfg_file} ${cp_params}
+        n_inliers=$(yq '.canonic_inliers' ${cp_params})
         for out in ${outliers}
         do
             for run in ${monte_runs}
             do
                 input_file=${path2_datasets}${dataset}"/SPOILED_DATA/"${out}"/"${run}".g2o"
                 output_traj=${path2_datasets}${dataset}"/EXP/"${date}"/"${g2o_opt}"_"${algo}"/"${out}"/"${run}".TRJ"
-                ./g2o_${algo}_3D -cfg ${cfg_file} -o ${output_traj} ${input_file} &
+                tmp_yaml=${tmp_folder}"/"${g2o_opt}"_"${algo}"_"${out}"_"${run}".yaml"
+                cp ${config} ${tmp_yaml}
+                yq -i ".name=\"$dataset\"" ${tmp_yaml}
+                yq -i ".dataset=\"$input_file\"" ${tmp_yaml} 
+                yq -i ".output=\"$output_traj\"" ${tmp_yaml}
+                yq -i ".canonic_inliers=\"$n_inliers\"" ${tmp_yaml}
+                ./g2o_${algo}_2D -cfg ${tmp_yaml} &
             done
             jobs
             wait
