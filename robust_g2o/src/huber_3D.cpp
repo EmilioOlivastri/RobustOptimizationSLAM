@@ -59,6 +59,7 @@ int main(int argc, char** argv)
   // Optimize the problem
   cout << "Starting optimization : " << endl;
   optimizer.initializeOptimization();
+  optimizer.vertex(0)->setFixed(true);
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   optimizer.optimize(maxIterations);
   chrono::steady_clock::time_point end = chrono::steady_clock::now();
@@ -87,7 +88,7 @@ int main(int argc, char** argv)
     rk->robustify(e->chi2(), rho);
     double weight = rho[1];
 
-    if (weight >= 1.0) ++fp;
+    if (weight >= 0.95) ++fp;
     else ++tn;  
   }
 

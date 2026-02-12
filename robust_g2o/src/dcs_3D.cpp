@@ -1,6 +1,11 @@
 #include "utils.hpp"
 #include "g2o/core/robust_kernel_impl.h"
 #include <boost/math/distributions/chi_squared.hpp>
+#include "g2o/core/sparse_optimizer.h"
+#include "g2o/core/block_solver.h"
+#include "g2o/core/factory.h"
+#include "g2o/core/optimization_algorithm_gauss_newton.h"
+#include "g2o/solvers/eigen/linear_solver_eigen.h"
 
 
 // we use the 2D and 3D SLAM types here
@@ -35,14 +40,18 @@ int main(int argc, char** argv)
   int inliers = cfg.canonic_inliers;
 
 
-  // Storing initial guess and vertices of optimization
-  vector<Eigen::Isometry3d> init_poses;
-  vector<VertexSE3*> v_poses;
+  auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+  linearSolver->setBlockOrdering(false);
+  auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
+  OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
 
   // create the optimizer to load the data and carry out the optimization
   OptimizableGraph::EdgeContainer loop_edges;
   SparseOptimizer optimizer;
-  setProblem<Eigen::Isometry3d, EdgeSE3, VertexSE3>(input_dataset, optimizer, init_poses, v_poses);
+  optimizer.load(input_dataset.c_str());
+  optimizer.setAlgorithm(solverGauss);
+  
+  odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
   getLoopEdges<EdgeSE3, VertexSE3>(optimizer, loop_edges);
 
   double chi2_th = Chi2inv(inlier_th, 6); // 95% quantile of chi2 with 3 dofs
@@ -59,6 +68,7 @@ int main(int argc, char** argv)
   // Optimize the problem
   cout << "Starting optimization : " << endl;
   optimizer.initializeOptimization();
+  optimizer.vertex(0)->setFixed(true);
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   optimizer.optimize(maxIterations);
   chrono::steady_clock::time_point end = chrono::steady_clock::now();

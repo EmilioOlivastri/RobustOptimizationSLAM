@@ -85,6 +85,7 @@ int main(int argc, char** argv)
 
   // Optimize the problem
   std::cout << "Starting optimization : " << std::endl;
+  optimizer.vertex(0)->setFixed(true);
   optimizer.initializeOptimization();
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   optimizer.optimize(maxIterations);

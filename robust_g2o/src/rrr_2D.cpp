@@ -1,10 +1,14 @@
 #include "utils.hpp"
 #include "rrr/include/RRR.hpp"
+#include "g2o/core/optimization_algorithm_levenberg.h"
+#include "g2o/solvers/eigen/linear_solver_eigen.h"
 
 using namespace g2o;
 using namespace std;
 
 typedef RRR<G2O_Interface<VertexSE2, EdgeSE2>> RRR_2D_G2O;
+
+G2O_USE_OPTIMIZATION_LIBRARY(eigen);
 
 int main(int argc, char **argv)
 {
@@ -21,16 +25,19 @@ int main(int argc, char **argv)
 	int maxIterations = cfg.maxiters;
   	int inliers = cfg.canonic_inliers;
 
-	int clusteringThreshold = 20;
-	int nIter = 50;
+	int clusteringThreshold = 10;
+	int nIter = 4;
 
 	g2o::SparseOptimizer optimizer;
 	auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 	linearSolver->setBlockOrdering(false);
 	auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
 	g2o::OptimizationAlgorithmGaussNewton *solverGauss = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
+	//g2o::OptimizationAlgorithmLevenberg *solverGauss = new g2o::OptimizationAlgorithmLevenberg(std::move(blockSolver));
 	optimizer.setAlgorithm(solverGauss);
 	optimizer.load(input_dataset.c_str());
+	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
+	optimizer.push();
 
 	vector<string> gt_loops;
 	for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
@@ -50,8 +57,9 @@ int main(int argc, char **argv)
 	rrr.setOptimizer(&optimizer);
 	rrr.robustify();
 	rrr.removeIncorrectLoops();
-	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
   	//optimizer.setVerbose(true);
+	optimizer.pop();
+	optimizer.vertex(0)->setFixed(true);
 	optimizer.initializeOptimization();
   	optimizer.optimize(maxIterations);
   	chrono::steady_clock::time_point end = chrono::steady_clock::now();
