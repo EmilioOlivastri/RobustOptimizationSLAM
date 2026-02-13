@@ -1,5 +1,6 @@
 #include "utils.hpp"
 #include "g2o/core/robust_kernel_impl.h"
+#include "dcs_kernel_impl.hpp"
 #include <boost/math/distributions/chi_squared.hpp>
 #include "g2o/core/sparse_optimizer.h"
 #include "g2o/core/block_solver.h"
@@ -60,7 +61,7 @@ int main(int argc, char** argv)
       EdgeSE3* e = static_cast<EdgeSE3*>(loop_edges[id_e]);
 
       // Add robust kernel DCS
-      RobustKernelDCS* rk = new RobustKernelDCS;
+      RobustDCSX* rk = new RobustDCSX;
       rk->setDelta(chi2_th);
       e->setRobustKernel(rk);
   }

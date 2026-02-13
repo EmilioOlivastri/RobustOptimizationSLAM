@@ -4,6 +4,12 @@ using namespace std;
 using namespace g2o;
 using namespace Eigen;
 
+#include <string>
+#include <iostream>
+#include <fstream>
+
+#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBWIDTH 60
 
 /*-------------------------------------------------------------------*/
 
@@ -102,6 +108,26 @@ void odometryInitialization(SparseOptimizer& optimizer)
 
 template void odometryInitialization<EdgeSE2, VertexSE2>(SparseOptimizer& optimizer);
 template void odometryInitialization<EdgeSE3, VertexSE3>(SparseOptimizer& optimizer);
+
+/*-------------------------------------------------------------------*/
+
+template <class EDGE, class VERTEX>
+void propagateCurrentGuess(SparseOptimizer& optimizer, int id_start, const vector<OptimizableGraph::Edge*>& odom)
+{ 
+    for ( size_t i = id_start + 1; i <= odom.size() ; ++i )
+    {
+        auto eo = dynamic_cast<EDGE*>(odom[i - 1]);
+        auto v1 = dynamic_cast<VERTEX*>(optimizer.vertex(i - 1));
+        auto v2 = dynamic_cast<VERTEX*>(optimizer.vertex(i));
+        v2->setEstimate(v1->estimate() * eo->measurement());
+    }
+
+    return;
+}
+
+template void propagateCurrentGuess<EdgeSE2, VertexSE2>(SparseOptimizer& optimizer, int id_start, const vector<OptimizableGraph::Edge*>& odom);
+template void propagateCurrentGuess<EdgeSE3, VertexSE3>(SparseOptimizer& optimizer, int id_start, const vector<OptimizableGraph::Edge*>& odom);
+
 /*-------------------------------------------------------------------*/
 
 
@@ -235,9 +261,6 @@ void readLine(ifstream& in_data, Isometry3d& pose)
 
 
 /*-------------------------------------------------------------------*/
-
-
-
 void readConfig(const std::string& cfg_filepath, Config& out_cfg)
 {
     YAML::Node config = YAML::LoadFile(cfg_filepath);
@@ -248,6 +271,7 @@ void readConfig(const std::string& cfg_filepath, Config& out_cfg)
     out_cfg.canonic_inliers = config["canonic_inliers"].as<int>();
     out_cfg.maxiters = config["max_iters"].as<int>();
     out_cfg.inlier_th = config["inlier_th"].as<double>();
+    out_cfg.batch_size = config["batch_size"].as<int>();
     
     // Switchable variables
     out_cfg.switch_prior = config["switch_prior"].as<double>();
@@ -260,6 +284,22 @@ void readConfig(const std::string& cfg_filepath, Config& out_cfg)
 
     return;
 }
+/*-------------------------------------------------------------------------*/
+
+bool cmpTime(pair<int, OptimizableGraph::Edge*> p1, pair<int, OptimizableGraph::Edge*> p2)
+{
+    int id1_v1 = p1.second->vertices()[1]->id();
+    int id1_v2 = p1.second->vertices()[0]->id();
+    int id1_max = id1_v1 > id1_v2 ? id1_v1 : id1_v2;
+
+    int id2_v1 = p2.second->vertices()[1]->id();
+    int id2_v2 = p2.second->vertices()[0]->id();
+    int id2_max = id2_v1 > id2_v2 ? id2_v1 : id2_v2;
+
+    return (id1_max < id2_max);
+}
+
+/*-----------------------------------------------------------------------*/
 
 void opencv2XYZ(SparseOptimizer& optimizer)
 {
@@ -344,4 +384,13 @@ void scaleTrajectory(SparseOptimizer& optimizer, const double scale)
     }
 
     return;
+}
+
+void printProgress(double percentage) 
+{
+    int val = (int) (percentage * 100);
+    int lpad = (int) (percentage * PBWIDTH);
+    int rpad = PBWIDTH - lpad;
+    printf("\r%3d%% [%.*s%*s]", val, lpad, PBSTR, rpad, "");
+    fflush(stdout);
 }
