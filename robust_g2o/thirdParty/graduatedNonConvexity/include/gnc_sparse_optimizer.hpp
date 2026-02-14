@@ -38,7 +38,8 @@ namespace g2o {
 
 enum GncLossType {
   GM /*Geman McClure*/,
-  TLS /*Truncated least squares*/
+  TLS /*Truncated least squares*/,
+  DCS /*Dynamic Covariance Scaling*/
 };
 
 class G2O_CORE_API GNCSparseOptimizer : public SparseOptimizer {

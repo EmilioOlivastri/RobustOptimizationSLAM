@@ -95,7 +95,7 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
     computeActiveErrors();
     cost = activeRobustChi2();
 
-    /**
+    /**/
     std::cout << "GNC iteration " << gnc_iter + 1 << " : mu = " << mu 
               << ", cost = " << std::setprecision(12) << cost 
               << ", prev_cost = " << std::setprecision(12) << prev_cost 
@@ -248,7 +248,11 @@ double GNCSparseOptimizer::initializeMu() const
     case GncLossType::GM:
       for (int idx = 0; idx < static_cast<int>(_activeEdges.size()); ++idx)
         mu_init = std::max(mu_init, 2 * _activeEdges[idx]->chi2() / Chi2inv(alpha_, _activeEdges[idx]->dimension()));
-      
+      return mu_init;
+    // Doing the same for DCS because similar
+    case GncLossType::DCS:
+      for (int idx = 0; idx < static_cast<int>(_activeEdges.size()); ++idx)
+        mu_init = std::max(mu_init, 2 * _activeEdges[idx]->chi2() / Chi2inv(alpha_, _activeEdges[idx]->dimension()));
       return mu_init;
     // surrogate cost is convex for mu close to zero. initialize as in remark 5 in GNC paper.
     // degenerate case: 2 * rmax_sq - params_.barcSq < 0 (handled in the main loop)
@@ -298,6 +302,16 @@ void GNCSparseOptimizer::initializeKernels(const double mu)
         e->setRobustKernel(rk);
       } 
       return;
+    case GncLossType::DCS:
+      for (int idx = 0; idx < static_cast<int>(egrad_.size()); ++idx)
+      {
+        OptimizableGraph::Edge* e = egrad_[idx];
+        RobustMuDCS* rk = new RobustMuDCS();
+        rk->setMu(mu);
+        rk->setDelta(Chi2inv(alpha_, e->dimension()));
+        e->setRobustKernel(rk);
+      } 
+      return;
     default:
       throw std::runtime_error("GncOptimizer::initializeKernels: called with unknown loss type.");
   }
@@ -315,6 +329,8 @@ double GNCSparseOptimizer::updateMu(const double mu) const
     // increases mu at each iteration (original cost is recovered for mu -> inf)
     case GncLossType::TLS:
       return mu * muStep_;
+    case GncLossType::DCS:
+      return std::max(1.0, mu / muStep_);
     default:
       throw std::runtime_error("GncOptimizer::updateMu: called with unknown loss type.");
   }
@@ -338,6 +354,9 @@ bool GNCSparseOptimizer::checkMuConvergence(const double mu) const
     // for TLS there is no stopping condition on mu (it must tend to infinity)
     case GncLossType::TLS:
       return false;
+    // mu=1 recovers the original DCS function
+    case GncLossType::DCS:
+      return std::fabs(mu - 1.0) < 1e-9;
     default:
       throw std::runtime_error("GncOptimizer::checkMuConvergence: called with unknown loss type.");
   }
@@ -416,12 +435,14 @@ bool GNCSparseOptimizer::checkKernelConvergence() const
         return false;
       }
       // Return true only if it gets through all edges successfully
-      std::cout << "GNC TLS: Kernel weights have converged to binary values: " << max_weight 
-      << " (total weight: " << tot << ")" << std::endl;
+      //std::cout << "GNC TLS: Kernel weights have converged to binary values: " << max_weight 
+      //<< " (total weight: " << tot << ")" << std::endl;
       return true;
     }
     // no kernel convergence criterion for GM
     case GncLossType::GM:
+      return false;
+    case GncLossType::DCS:
       return false;
     default:
       throw std::runtime_error("GncOptimizer::checkKernelConvergence: called with unknown loss type.");
@@ -448,6 +469,15 @@ void GNCSparseOptimizer::updateKernels(const double mu)
       {
         OptimizableGraph::Edge* e = egrad_[idx];
         RobustMuTLS* rk = static_cast<RobustMuTLS*>(e->robustKernel());
+        rk->setMu(mu);
+        e->computeError();
+      } 
+      return;
+    case GncLossType::DCS:
+      for (int idx = 0; idx < static_cast<int>(egrad_.size()); ++idx)
+      {
+        OptimizableGraph::Edge* e = egrad_[idx];
+        RobustMuDCS* rk = static_cast<RobustMuDCS*>(e->robustKernel());
         rk->setMu(mu);
         e->computeError();
       } 

@@ -54,5 +54,33 @@ void RobustMuGM::setMu(number_t mu)
   return;
 }
 
+void RobustMuDCS::robustify(double e2, Vector3& rho) const 
+{ 
+  // _delta = chi2 threshold for this kernel
+  const double bound = _delta * _mu;
+  const double sq_mu = sqrt(_mu);
+
+  rho[0] = e2;
+  rho[1] = 1.;
+  rho[2] = 0.;
+   
+  if (e2 > bound) 
+  {   
+    const number_t dcs_w = 2 * _mu * _delta / (e2 + _mu * _delta);
+    const number_t e4 = e2 * e2;
+    const number_t chi2 = _delta;
+    const number_t chi4 = _delta * _delta;
+    
+    rho[0] = (_mu * chi4 * e2 + chi2 *e4) / ((e2 + sq_mu * chi2) * (e2 + sq_mu * chi2));
+    rho[1] = dcs_w * dcs_w;
+    rho[2] = 0.0;
+  }
+}
+
+void RobustMuDCS::setMu(number_t mu) 
+{
+  _mu = mu;
+  return;
+}
 
 }// end namespace g2o
