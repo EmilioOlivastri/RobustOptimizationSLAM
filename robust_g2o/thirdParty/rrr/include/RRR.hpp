@@ -89,6 +89,12 @@ public:
 		return true;
 	}
 
+	bool setIncrOptimizer(void* optimizerPtr)
+	{
+		gWrapper->setOptimizer(optimizerPtr);		
+		return true;
+	}
+
 	bool intraClusterConsistent(int clusterID)
 	{
 		IntPairDoubleMap chi2LinkErrors;
@@ -174,7 +180,7 @@ public:
 
 		if(
 				activeChi2Graph 	< 	utils::chi2(edgeDimension*activeEdgeCount)
-				and
+				&&
 				allLinksError 		< 	utils::chi2(edgeDimension*activeLinks.size())
 			)
 		{
@@ -226,6 +232,21 @@ public:
 		return true;
 	}
 
+	bool incrRobustify(const std::vector<g2o::HyperGraph::Edge*>& odom_vec,
+					   const std::vector<g2o::HyperGraph::Edge *>& loop_vec, 
+					   bool eraseIncorrectLinks=false)
+	{
+		IntPairSet loops;
+		gWrapper->setMeasurements(odom_vec, loop_vec, loops);
+
+		if ( loops.size() < clusteringThreshold )
+			return false;
+
+		clusterizer.clusterize(loops,clusteringThreshold);
+
+		return robustify(eraseIncorrectLinks); 
+	}
+
 	bool robustify(bool eraseIncorrectLinks=false)
 	{
 
@@ -256,6 +277,8 @@ public:
 
 
 		bool done = false;
+		int max_iter = 10;
+		int iter = 0;
 		while(!done)
 		{
 			done = true;
@@ -266,7 +289,7 @@ public:
 
 			for( ; cIt!=cEnd; cIt++)
 			{
-				if(goodSet.find(*cIt)==goodSet.end() and
+				if(goodSet.find(*cIt)==goodSet.end() &&
 						rejectSet.find(*cIt)==rejectSet.end()) // We can't ignore this because it is nether in goodSet nor in rejectSet at the moment
 				{
 					hypotheses.insert(*cIt);
@@ -303,8 +326,13 @@ public:
 			{
 				rejectSet.clear();
 			}
+
 			rejectSet.insert(tempRejectSet.begin(),tempRejectSet.end());
 			tempRejectSet.clear();
+
+			if (iter > max_iter) done = true;
+
+			++iter;
 
 		}
 

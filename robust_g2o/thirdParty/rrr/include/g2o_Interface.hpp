@@ -114,6 +114,26 @@ public:
 		return true;
 	}
 
+	void setMeasurements(const EdgePtrVector& odom_vec, const EdgePtrVector& loop_vec, IntPairSet &loops)
+	{
+		// Adding new odometry measurements
+		for (const auto& odom: odom_vec) odomteryEdges.push_back(odom);
+		
+		// Adding the old loop closures to not forget old one
+		for (const auto& map_elem: loopclosureEdges) loops.insert(map_elem.first);
+
+		// Adding the new loop closures
+		for (const auto& el: loop_vec)
+		{
+			int e1 = el->vertices()[0]->id();
+			int e2 = el->vertices()[0]->id();
+			loops.insert(IntPair(e1, e2));
+			loopclosureEdges[IntPair(e1, e2)] = el;
+		}	
+
+		return;
+	}
+
 	virtual ~G2O_Interface() {}
 
 	int vertexCount() { return optimizer->vertices().size(); };

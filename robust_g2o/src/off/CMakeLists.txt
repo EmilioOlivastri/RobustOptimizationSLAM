@@ -22,11 +22,11 @@ target_link_libraries(SC_2D PRIVATE g2o_common switchlib)
 add_executable(SC_3D sc_3D.cpp)
 target_link_libraries(SC_3D PRIVATE g2o_common switchlib)
 
-add_executable(g2o_RRR_2D rrr_2D.cpp)
-target_link_libraries(g2o_RRR_2D PRIVATE g2o_common rrrlib)
+add_executable(RRR_2D rrr_2D.cpp)
+target_link_libraries(RRR_2D PRIVATE g2o_common rrrlib)
 
-add_executable(g2o_RRR_3D rrr_3D.cpp)
-target_link_libraries(g2o_RRR_3D PRIVATE g2o_common rrrlib)
+add_executable(RRR_3D rrr_3D.cpp)
+target_link_libraries(RRR_3D PRIVATE g2o_common rrrlib)
 
 add_executable(GNC_2D gnc_2D.cpp)
 target_link_libraries(GNC_2D PRIVATE g2o_common gncg2olib)

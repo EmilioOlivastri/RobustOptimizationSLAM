@@ -23,17 +23,27 @@ int main(int argc, char **argv)
     string input_dataset = cfg.dataset;
 	int maxIterations = cfg.maxiters;
   	int inliers = cfg.canonic_inliers;
-
+	int batch_size = cfg.batch_size;
 	int clusteringThreshold = 20;
-	int nIter = 50;
+	int nIter = cfg.maxiters; // 50
 
-	g2o::SparseOptimizer optimizer;
-	auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+	SparseOptimizer optimizer;
+	auto linearSolver = make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 	linearSolver->setBlockOrdering(false);
-	auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
-	g2o::OptimizationAlgorithmGaussNewton *solverGauss = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
-	optimizer.setAlgorithm(solverGauss);
+	auto blockSolver = make_unique<BlockSolverX>(move(linearSolver));
+	OptimizationAlgorithmGaussNewton *solver = new OptimizationAlgorithmGaussNewton(move(blockSolver));
+	optimizer.setAlgorithm(solver);
 	optimizer.load(input_dataset.c_str());
+	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
+
+	// GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT
+	OptimizableGraph::EdgeContainer loop_edges, odom_edges;
+	getLoopEdges<EdgeSE2, VertexSE2>(optimizer, loop_edges);
+	getOdometryEdges<EdgeSE2, VertexSE2>(optimizer, odom_edges);
+	vector<pair<bool, OptimizableGraph::Edge*>> loops_w_label;
+	for (size_t idx = 0 ; idx < cfg.canonic_inliers; loops_w_label.push_back(make_pair(true, loop_edges[idx++])));
+	for (size_t idx = cfg.canonic_inliers ; idx < loop_edges.size(); loops_w_label.push_back(make_pair(false, loop_edges[idx++])));
+	sort(loops_w_label.begin(), loops_w_label.end(), cmpTime);
 	
 	vector<string> gt_loops;
 	for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
@@ -45,18 +55,44 @@ int main(int argc, char **argv)
 			gt_loops.push_back(key);
 		}
   	}
+    
+	// INCREMENTAL EXPERIMENT
+  	RRR_3D_G2O rrr(clusteringThreshold, nIter);
+	int last_odom_idx = 0;
+	double avg_time = 0.0; int n_optimization = 0;
+	for ( size_t e_it = 0 ; e_it < loops_w_label.size() ; ++e_it )
+	{
+		int max_vid = 0;
+		vector<HyperGraph::Edge *> test_loops, test_odom;
+		for (size_t batch_it = 0; batch_it < batch_size && e_it + batch_it < loops_w_label.size() ; ++batch_it)
+		{
+			OptimizableGraph::Edge* el = loops_w_label[e_it + batch_it].second;
+			int v0 = el->vertices()[0]->id();
+			int v1 = el->vertices()[1]->id();
+			max_vid = max(max_vid, v0);
+			max_vid = max(max_vid, v1);
+			test_loops.push_back(el);
+		}
+		e_it += batch_size - 1;
+		for (size_t eo_it = last_odom_idx ; eo_it < max_vid ; test_odom.push_back(odom_edges[eo_it++]));
+		last_odom_idx = max_vid;
 
-	/* Initialized RRR with the parameters defined */
-  	chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-	RRR_3D_G2O rrr(clusteringThreshold, nIter);
-    rrr.setOptimizer(&optimizer);
-	rrr.robustify();
+		// Optimizing the problem until the last vertex
+		chrono::steady_clock::time_point begin = chrono::steady_clock::now();
+		rrr.incrRobustify(test_odom, test_loops);
+		chrono::steady_clock::time_point end = chrono::steady_clock::now();
+		chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
+		avg_time += delta_time.count() / 1000000.0;
+		++n_optimization;
+
+		printProgress((double)(e_it + 1) / (double)loops_w_label.size());
+	}
+	cout << endl;
+
 	rrr.removeIncorrectLoops();
-	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
-  	optimizer.initializeOptimization();
-  	optimizer.optimize(maxIterations);
-  	chrono::steady_clock::time_point end = chrono::steady_clock::now();
-  	chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);
+	optimizer.vertex(0)->setFixed(true);
+	optimizer.initializeOptimization();
+  	optimizer.optimize(100);
 
 	std::cout << "Optimtization Concluded!" << std::endl;
 	ofstream outfile;
@@ -97,21 +133,22 @@ int main(int argc, char **argv)
 
 	float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
   	float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0; 
-	float dt = delta_time.count() / 1000000.0;
 
-	std::cout << "Canonic Inliers = " << cfg.canonic_inliers << std::endl;
-	std::cout << "Prec = " << precision << std::endl;
-	std::cout << "Rec = " << recall << std::endl;
-	std::cout << "TP = " << tp << std::endl;
-	std::cout << "TN = " << tn << std::endl;
-	std::cout << "FP = " << fp << std::endl;
-	std::cout << "FN = " << fn << std::endl;
+	cout << "Total Time of Completion " << avg_time << " [s]" << endl;
+  	cout << "Avg time per batch " << avg_time / n_optimization << " [s]" << endl;
+	cout << "Canonic Inliers = " << cfg.canonic_inliers << endl;
+	cout << "Prec = " << precision << endl;
+	cout << "Rec = " << recall << endl;
+	cout << "TP = " << tp << endl;
+	cout << "TN = " << tn << endl;
+	cout << "FP = " << fp << endl;
+	cout << "FN = " << fn << endl;
 
 
 	string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
 	outfile.open(output_file_pr.c_str());
 	outfile << precision << " " << recall << endl;
-	outfile << dt << endl;
+  	outfile << avg_time << " " << avg_time / n_optimization << endl;
 	outfile.close();
 
 	return 0;

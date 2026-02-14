@@ -27,3 +27,9 @@ target_link_libraries(IN_GNC_2D PRIVATE g2o_common gncg2olib)
 
 add_executable(IN_GNC_3D gnc_3D.cpp)
 target_link_libraries(IN_GNC_3D PRIVATE g2o_common gncg2olib)
+
+add_executable(IN_RRR_2D rrr_2D.cpp)
+target_link_libraries(IN_RRR_2D PRIVATE g2o_common rrrlib)
+
+add_executable(IN_RRR_3D rrr_3D.cpp)
+target_link_libraries(IN_RRR_3D PRIVATE g2o_common rrrlib)
