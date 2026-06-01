@@ -1,15 +1,11 @@
-set(G2O_ROOT /home/slamemix/Workspace/libs/g2o)
-
-find_package(G2O REQUIRED)
-find_package (glog)
+find_package(glog QUIET)
 find_package(yaml-cpp REQUIRED)
 
 add_subdirectory(thirdParty)
 
 include_directories(
   include
-  ${EIGEN_INCLUDE_DIR}
-  "/usr/local/include/eigen3"
+  ${EIGEN3_INCLUDE_DIRS}
   ${G2O_INCLUDE_DIR}
   ${YAML_CPP_INCLUDE_DIR}
   thirdParty

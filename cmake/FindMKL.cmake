@@ -68,8 +68,6 @@ FIND_PATH(MKL_ROOT_DIR
         "C:/Program Files/Intel/Composer XE 2013/mkl"
 )
 
-message("MKL ROOT DIR = ${MKL_ROOT_DIR}")
-
 FIND_PATH(MKL_INCLUDE_DIR
   mkl_cblas.h
   PATHS

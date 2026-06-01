@@ -4,10 +4,9 @@ find_package(KimeraRPGO REQUIRED)
 
 include_directories(
   include
-  ${EIGEN_INCLUDE_DIR}
+  ${EIGEN3_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
   ${KimeraRPGO_INCLUDE_DIR}
-  "/usr/local/include/eigen3"
   ${YAML_CPP_INCLUDE_DIR}
 )
 

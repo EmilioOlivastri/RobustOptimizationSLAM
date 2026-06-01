@@ -8,7 +8,12 @@ LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(Boost REQUIRED COMPONENTS system filesystem regex timer date_time program_options)
 find_package(Eigen3 REQUIRED)
+get_target_property(EIGEN3_INCLUDE_DIRS Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
 find_package(yaml-cpp REQUIRED)
+find_package(G2O REQUIRED)
+set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
+find_package(GTSAM REQUIRED)
+set(CMAKE_MESSAGE_LOG_LEVEL STATUS)
 
 add_subdirectory(robust_g2o)
 add_subdirectory(robust_gtsam)
