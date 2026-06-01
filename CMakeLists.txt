@@ -18,3 +18,4 @@ set(CMAKE_MESSAGE_LOG_LEVEL STATUS)
 add_subdirectory(robust_g2o)
 add_subdirectory(robust_gtsam)
 add_subdirectory(evaluator)
+
