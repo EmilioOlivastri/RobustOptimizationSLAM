@@ -1,15 +1,16 @@
 #!/bin/bash
 path2_datasets="/home/slamemix/Data/RobustSLAM/2D/"
-dataset_list="CSAIL FR079 INTEL FRH"
-outliers="10 20 30 40 50"
+dataset_list="CSAIL FR079 INTEL"
+outliers="60 70 80 90"
 monte_runs="00 01 02 03 04 05 06 07 08 09"
 date="260214"
 
 # G2O related solutiona
 g2o_opt="G2O"
-g2o_list="HUBER DCS MAXMIX RRR SC GNC"
+g2o_list="DCS SC GNC"
 
-cd ../build/robust_g2o
+cd /home/slamemix/Workspace/RPGO/RobustOptimizationSLAM/build/robust_g2o/src/incr
+
 config="/home/slamemix/Workspace/RPGO/RobustOptimizationSLAM/robust_g2o/cfg/params_2D.yaml"
 tmp_folder="tmp"
 
@@ -25,7 +26,7 @@ do
         do
             for run in ${monte_runs}
             do
-                input_file=${path2_datasets}${dataset}"/SPOILED_DATA/"${out}"/"${run}".g2o"
+                input_file=${path2_datasets}${dataset}"/SPOILED_DATA_EXTREME/"${out}"/"${run}".g2o"
                 output_traj=${path2_datasets}${dataset}"/EXP/"${date}"/"${g2o_opt}"_"${algo}"/"${out}"/"${run}".TRJ"
                 tmp_yaml=${tmp_folder}"/"${g2o_opt}"_"${algo}"_"${out}"_"${run}".yaml"
                 cp ${config} ${tmp_yaml}
@@ -33,7 +34,7 @@ do
                 yq -i ".dataset=\"$input_file\"" ${tmp_yaml} 
                 yq -i ".output=\"$output_traj\"" ${tmp_yaml}
                 yq -i ".canonic_inliers=\"$n_inliers\"" ${tmp_yaml}
-                ./g2o_${algo}_2D -cfg ${tmp_yaml} &
+                ./IN_${algo}_2D -cfg ${tmp_yaml} &
             done
             jobs
             wait
