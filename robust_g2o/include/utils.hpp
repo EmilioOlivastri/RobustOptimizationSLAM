@@ -55,6 +55,12 @@ void getLoopEdges(const g2o::SparseOptimizer& optimizer, g2o::OptimizableGraph::
 template <class EDGE, class VERTEX>
 void propagateCurrentGuess(g2o::SparseOptimizer& optimizer, int id_start, const std::vector<g2o::OptimizableGraph::Edge*>& odom);
 
+template <class EDGE>
+Eigen::MatrixXd computeSampleCovariance(g2o::OptimizableGraph::EdgeContainer& edges);
+
+void wishartPrior(const Eigen::MatrixXd& sigma_0, const double w_prior, const int n_measurements,
+                  Eigen::MatrixXd& v_matrix, double& v);
+
 void writeVertex(std::ofstream& out_data, g2o::VertexSE2* v);
 void writeVertex(std::ofstream& out_data, g2o::VertexSE3* v);
 

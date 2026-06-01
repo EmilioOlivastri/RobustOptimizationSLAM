@@ -50,7 +50,6 @@ int main(int argc, char** argv)
   OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
   optimizer.setAlgorithm(solverGauss);
   odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
-  correctedInformationMatrices(optimizer);
 
   // GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT
   OptimizableGraph::EdgeContainer loop_edges, odom_edges;

@@ -43,7 +43,6 @@ int main(int argc, char** argv)
   auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
   OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
   optimizer.setAlgorithm(solverGauss);
-  correctedInformationMatrices(optimizer);
   odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
 
   // GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT

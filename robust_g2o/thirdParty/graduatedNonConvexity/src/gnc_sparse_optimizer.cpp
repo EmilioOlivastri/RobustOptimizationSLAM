@@ -69,7 +69,7 @@ GNCSparseOptimizer::GNCSparseOptimizer()
 GNCSparseOptimizer::~GNCSparseOptimizer() {}
 
 // Default GNC optimization
-int GNCSparseOptimizer::optimize(int iterations, bool online) 
+int GNCSparseOptimizer::optimizeX(int iterations, bool online) 
 {
   // Compute solution for the convex approximation of the problem
   //int total_iterations = defaultOptimize(online);
@@ -116,7 +116,7 @@ int GNCSparseOptimizer::optimize(int iterations, bool online)
 }
 
 // Optimization that uses the previous estimate only if it improves the cost
-int GNCSparseOptimizer::optimizeX(int iterations, bool online) 
+int GNCSparseOptimizer::optimizeY(int iterations, bool online) 
 {
   // Compute solution for the convex approximation of the problem
   double cost_init_guess = activeChi2();
@@ -212,6 +212,7 @@ void GNCSparseOptimizer::setMuStep(double mu_step)
 // Function needs to be called after initializeOptimization
 void GNCSparseOptimizer::setKnownInliers(EdgeContainer& inliers)
 {
+  int counter = 0;
   for (size_t idx = 0; idx < _activeEdges.size(); ++idx)
   {
     OptimizableGraph::Edge* e_active = _activeEdges[idx];
@@ -219,11 +220,11 @@ void GNCSparseOptimizer::setKnownInliers(EdgeContainer& inliers)
                                                          e_active, EdgeIDCompare());
     // If the activeEdge is in the inliers, we don't need to robustify it as we want it to
     // have as much influence as possible
-    if ( it_first != inliers.end() ) continue;
+    if ( it_first != inliers.end() && e_active->internalId() == (*it_first)->internalId() ) continue;
 
     // Vector of edges to be robustified
     egrad_.push_back(e_active);
-
+    ++counter;
   }
 
   return;
@@ -248,6 +249,7 @@ double GNCSparseOptimizer::initializeMu() const
     case GncLossType::GM:
       for (int idx = 0; idx < static_cast<int>(_activeEdges.size()); ++idx)
         mu_init = std::max(mu_init, 2 * _activeEdges[idx]->chi2() / Chi2inv(alpha_, _activeEdges[idx]->dimension()));
+        if (mu_init < 10.0) mu_init = 256; 
       return mu_init;
     // Doing the same for DCS because similar
     case GncLossType::DCS:
@@ -376,31 +378,15 @@ bool GNCSparseOptimizer::isEdgeInlier(const int idx)
   // Check index bounds
   if (idx < 0 || idx >= static_cast<int>(egrad_.size()))
     throw std::runtime_error("GncOptimizer::isEdgeInlier: index out of bounds.");
-  
+
   OptimizableGraph::Edge* e = egrad_[idx];
   RobustKernel* rk = e->robustKernel();
   Vector3 rho;
   rk->robustify(e->chi2(), rho);
   double weight = rho[1];
-  double residual = computeResidual(e);
-  /**
-  std::cout << "RHO: " << rho.transpose() << std::endl;
-  std::cout << "Edge " << idx << " weight: " << weight << " delta:" << rk->delta() << " residual:" << residual << " chi2:" << e->chi2() << std::endl;
-  if (lossType_ == GncLossType::TLS)
-    std::cout << " mu: " << static_cast<RobustMuTLS*>(rk)->getMu() << std::endl;
-  else
-  {
-    double delta = rk->delta();
-    double e2 = e->chi2();
-    double mu = static_cast<RobustMuGM*>(rk)->getMu();
-    const double k = mu * delta;
-    const double aux = 1. / (k + e2);
-    double robust_chi2 = k * e2 * aux;
-    double w = k * k * aux * aux;
-    std::cout << " mu: " << mu << " robust_chi2: " << robust_chi2 << " weight: " << w << std::endl;
-  }
-  /**/
-  return weight > 0.5; // consider inlier if weight is closer to 1 than to 0
+  //double residual = computeResidual(e);
+
+  return weight > 0.9; // consider inlier if weight is closer to 1 than to 0
   
 }
 
@@ -486,6 +472,18 @@ void GNCSparseOptimizer::updateKernels(const double mu)
       throw std::runtime_error("GncOptimizer::updateKernels: called with unknown loss type.");
   }
 
+  return;
+}
+
+void GNCSparseOptimizer::resetKernels()
+{
+  for (int idx = 0; idx < static_cast<int>(egrad_.size()); ++idx)
+  {
+    OptimizableGraph::Edge* e = egrad_[idx];
+    e->setRobustKernel(nullptr);
+  }
+
+  egrad_.clear();
   return;
 }
 

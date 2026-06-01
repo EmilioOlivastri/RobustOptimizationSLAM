@@ -126,7 +126,7 @@ public:
 		for (const auto& el: loop_vec)
 		{
 			int e1 = el->vertices()[0]->id();
-			int e2 = el->vertices()[0]->id();
+			int e2 = el->vertices()[1]->id();
 			loops.insert(IntPair(e1, e2));
 			loopclosureEdges[IntPair(e1, e2)] = el;
 		}	

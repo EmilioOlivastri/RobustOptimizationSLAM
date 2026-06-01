@@ -43,10 +43,8 @@ int main(int argc, char** argv)
   auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
   linearSolver->setBlockOrdering(false);
   auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
-  //OptimizationAlgorithmGaussNewton *solverGauss = new OptimizationAlgorithmGaussNewton(std::move(blockSolver));
   OptimizationAlgorithmLevenberg *solverGauss = new OptimizationAlgorithmLevenberg(std::move(blockSolver));
   optimizer.setAlgorithm(solverGauss);
-  correctedInformationMatrices(optimizer);
 
   // GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT
   OptimizableGraph::EdgeContainer loop_edges, odom_edges;

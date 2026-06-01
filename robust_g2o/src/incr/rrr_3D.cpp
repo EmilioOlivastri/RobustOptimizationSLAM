@@ -1,5 +1,7 @@
 #include "utils.hpp"
 #include "rrr/include/RRR.hpp"
+#include "g2o/core/optimization_algorithm_dogleg.h"
+
 
 using namespace g2o;
 using namespace std;
@@ -15,8 +17,7 @@ int main(int argc, char **argv)
 	arg.parseArgs(argc, argv);
 
 	// Storing initial guess and vertices of optimization
-	vector<SE2> init_poses;
-	vector<VertexSE2*> v_poses;
+	vector<VertexSE3*> v_poses;
 
 	Config cfg;
   	readConfig(cfg_file, cfg);
@@ -34,12 +35,12 @@ int main(int argc, char **argv)
 	OptimizationAlgorithmGaussNewton *solver = new OptimizationAlgorithmGaussNewton(move(blockSolver));
 	optimizer.setAlgorithm(solver);
 	optimizer.load(input_dataset.c_str());
-	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
+	odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
 
 	// GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT
 	OptimizableGraph::EdgeContainer loop_edges, odom_edges;
-	getLoopEdges<EdgeSE2, VertexSE2>(optimizer, loop_edges);
-	getOdometryEdges<EdgeSE2, VertexSE2>(optimizer, odom_edges);
+	getLoopEdges<EdgeSE3, VertexSE3>(optimizer, loop_edges);
+	getOdometryEdges<EdgeSE3, VertexSE3>(optimizer, odom_edges);
 	vector<pair<bool, OptimizableGraph::Edge*>> loops_w_label;
 	for (size_t idx = 0 ; idx < cfg.canonic_inliers; loops_w_label.push_back(make_pair(true, loop_edges[idx++])));
 	for (size_t idx = cfg.canonic_inliers ; idx < loop_edges.size(); loops_w_label.push_back(make_pair(false, loop_edges[idx++])));
@@ -58,6 +59,8 @@ int main(int argc, char **argv)
     
 	// INCREMENTAL EXPERIMENT
   	RRR_3D_G2O rrr(clusteringThreshold, nIter);
+	optimizer.push();
+	rrr.setIncrOptimizer(&optimizer);
 	int last_odom_idx = 0;
 	double avg_time = 0.0; int n_optimization = 0;
 	for ( size_t e_it = 0 ; e_it < loops_w_label.size() ; ++e_it )
@@ -74,6 +77,9 @@ int main(int argc, char **argv)
 			test_loops.push_back(el);
 		}
 		e_it += batch_size - 1;
+
+		if ( e_it >=  loops_w_label.size() ) max_vid = odom_edges.size();
+
 		for (size_t eo_it = last_odom_idx ; eo_it < max_vid ; test_odom.push_back(odom_edges[eo_it++]));
 		last_odom_idx = max_vid;
 
@@ -88,11 +94,23 @@ int main(int argc, char **argv)
 		printProgress((double)(e_it + 1) / (double)loops_w_label.size());
 	}
 	cout << endl;
+	optimizer.pop();
+	RRR_3D_G2O rrr_ref(clusteringThreshold, nIter);
+	rrr_ref.setOptimizer(&optimizer);
+	rrr_ref.robustify();
+	rrr_ref.removeIncorrectLoops();
 
-	rrr.removeIncorrectLoops();
+	auto reflinearSolver = make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+	reflinearSolver->setBlockOrdering(false);
+	auto refblockSolver = make_unique<BlockSolverX>(move(reflinearSolver));
+	OptimizationAlgorithmDogleg *refsolver = new OptimizationAlgorithmDogleg(move(refblockSolver));
+	//optimizer.setAlgorithm(refsolver);
+
 	optimizer.vertex(0)->setFixed(true);
+	//optimizer.setVerbose(true);
+	odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
 	optimizer.initializeOptimization();
-  	optimizer.optimize(100);
+  	optimizer.optimize(10);
 
 	std::cout << "Optimtization Concluded!" << std::endl;
 	ofstream outfile;
@@ -105,7 +123,7 @@ int main(int argc, char **argv)
 	}
 	outfile.close();
 
-	vector<string> est_loops;		
+	vector<string> est_loops;
 	for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
   	{
     	EdgeSE3* edge_odom = dynamic_cast<EdgeSE3*>(*it_e);

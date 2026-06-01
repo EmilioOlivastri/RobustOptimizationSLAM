@@ -51,8 +51,6 @@ int main(int argc, char** argv)
   GNCSparseOptimizer optimizer(GncLossType::TLS);
   optimizer.setAlgorithm(solverGauss);
   optimizer.load(input_dataset.c_str());
-  correctedInformationMatrices(optimizer);
-  //odometryInitialization<EdgeSE3, VertexSE3>(optimizer);
   optimizer.vertex(0)->setFixed(true);
   optimizer.initializeOptimization();
 
@@ -115,12 +113,6 @@ int main(int argc, char** argv)
   }
 
   for ( size_t e_id = 0; e_id < odometry_edges.size(); inlier_edges.insert(odometry_edges[e_id++]) );
-
-  /**
-  optimizer.pop();
-  optimizer.initializeOptimization(inlier_edges);
-  optimizer.defaultOptimize(10);
-  /**/
 
   float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
   float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0;

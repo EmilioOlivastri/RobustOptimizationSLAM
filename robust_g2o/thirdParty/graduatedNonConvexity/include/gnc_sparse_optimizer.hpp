@@ -53,8 +53,8 @@ public:
   GNCSparseOptimizer();
   ~GNCSparseOptimizer();
 
-  int optimize(int iterations, bool online);
   int optimizeX(int iterations, bool online);
+  int optimizeY(int iterations, bool online);
 
   void setKnownInliers(EdgeContainer& inliers);
   void setInnerIterations(int iterations);
@@ -62,6 +62,7 @@ public:
   void setAlpha(const double alpha);
   int defaultOptimize(bool online);
   bool isEdgeInlier(const int idx);
+  void resetKernels();
   void clear();
 
  private:

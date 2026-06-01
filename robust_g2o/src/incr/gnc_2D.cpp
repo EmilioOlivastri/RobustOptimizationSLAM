@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     // Optimizing the problem until the last vertex
     optimizer.initializeOptimization(eset_opt);
     chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-    optimizer.optimize(maxIterations, false);
+    optimizer.optimizeX(maxIterations, false);
     propagateCurrentGuess<EdgeSE2, VertexSE2>(optimizer, last_odom_idx, odom_edges);
     chrono::steady_clock::time_point end = chrono::steady_clock::now();
     chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);

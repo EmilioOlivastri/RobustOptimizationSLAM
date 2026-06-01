@@ -156,6 +156,7 @@ void getOdometryEdges(const SparseOptimizer& optimizer, OptimizableGraph::EdgeCo
 
 template void getOdometryEdges<EdgeSE2, VertexSE2>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& odometry_edges);
 template void getOdometryEdges<EdgeSE3, VertexSE3>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& odometry_edges);
+
 /*-------------------------------------------------------------------*/
 
 template <class EDGE, class VERTEX>
@@ -183,7 +184,52 @@ void getLoopEdges(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContai
 
 template void getLoopEdges<EdgeSE2, VertexSE2>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& loop_edges);
 template void getLoopEdges<EdgeSE3, VertexSE3>(const SparseOptimizer& optimizer, OptimizableGraph::EdgeContainer& loop_edges);
+
 /*-------------------------------------------------------------------*/
+
+void wishartPrior(const Eigen::MatrixXd& sigma_0, const double w_prior, const int n_measurements,
+                  Eigen::MatrixXd& v_matrix, double& v)
+{
+    
+    //int mat_dof = v_matrix.cols() * v_matrix.rows();
+    int mat_dof = 6;
+    v_matrix.setZero();
+
+    v_matrix = w_prior * n_measurements * sigma_0.inverse();
+    v = w_prior * n_measurements + mat_dof + 1;
+
+    return;
+}
+
+/*-------------------------------------------------------------------*/
+
+template <class EDGE>
+Eigen::MatrixXd computeSampleCovariance(OptimizableGraph::EdgeContainer& edges)
+{
+    EDGE* e0 = dynamic_cast<EDGE*>(edges[0]);
+    int dim_measure = e0->measurementDimension();
+    Eigen::MatrixXd sample_cov(dim_measure, dim_measure);
+    sample_cov.setZero();
+
+    for (size_t idx = 0; idx < edges.size(); ++idx )
+    {
+        EDGE* e = dynamic_cast<EDGE*>(edges[idx]);
+        e->computeError();
+        sample_cov += e->error() * e->error().transpose();
+    } 
+    
+    double factor = 1.0 / static_cast<double>(edges.size());
+
+    return factor * sample_cov;
+}
+
+template Eigen::MatrixXd computeSampleCovariance<EdgeSE2>(OptimizableGraph::EdgeContainer& edges);
+template Eigen::MatrixXd computeSampleCovariance<EdgeSE3>(OptimizableGraph::EdgeContainer& edges);
+
+/*-------------------------------------------------------------------*/
+
+
+
 template <class T>
 void readSolutionFile(vector<T>& poses, const string& path)
 {
@@ -351,13 +397,13 @@ void correctedInformationMatrices(g2o::SparseOptimizer& optimizer)
         Eigen::Matrix<double, 6, 6> info = Eigen::Matrix<double, 6, 6>::Zero();
 
         // Correcting translation part
-        info(0, 0) = 450.0;  // TUM: 100.0  | KITTI_05: 450.0
-        info(1, 1) = 400.0;   // TUM: 80.0  | KITTI_05: 200.0
-        info(2, 2) = 2000.0; // TUM: 2000.0 | KITTI_05: 2000.0
+        info(0, 0) = 800.0;  // TUM: 300.0   | KITTI_05: 1000.0 | KITTI_00: 800.0
+        info(1, 1) = 650.0;  // TUM: 260.0   | KITTI_05: 800.0  | KITTI_00: 650.0
+        info(2, 2) = 5000.0; // TUM: 2500.0  | KITTI_05: 1000.0 | KITTI_00: 5000.0
         // Correcting rotation part
-        info(3, 3) = 2000.0; // TUM: 1000.0 | KITTI_05: 2000.0
-        info(4, 4) = 2000.0; // TUM: 1000.0 | KITTI_05: 2000.0
-        info(5, 5) = 250.0;  // TUM: 100.0  | KITTI_05: 100.0
+        info(3, 3) = 5000.0; // TUM: 2500.0 | KITTI_05: 1000.0 | KITTI_00: 5000.0
+        info(4, 4) = 5000.0; // TUM: 2500.0 | KITTI_05: 1000.0 | KITTI_00: 5000.0
+        info(5, 5) = 700.0;  // TUM: 200.0  | KITTI_05: 900.0  | KITTI_00: 700.0
         edge->setInformation(info);
     }  
 

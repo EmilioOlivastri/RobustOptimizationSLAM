@@ -50,7 +50,6 @@ int main(int argc, char** argv)
   optimizer.setAlpha(inlier_th);
   optimizer.setInnerIterations(inner_iterations);
   optimizer.setMuStep(mu_step);
-  correctedInformationMatrices(optimizer);
 
   // GETTING INLIER AND OUTLIER LABELS + SETTING EXPERIMENTS AS IF IT WAS INCREMENTAL EXPERIMENT
   OptimizableGraph::EdgeContainer loop_edges, odom_edges;
@@ -89,7 +88,7 @@ int main(int argc, char** argv)
     // Optimizing the problem until the last vertex
     optimizer.initializeOptimization(eset_opt);
     chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-    optimizer.optimize(maxIterations, false);
+    optimizer.optimizeX(maxIterations, false);
     propagateCurrentGuess<EdgeSE3, VertexSE3>(optimizer, last_odom_idx, odom_edges);
     chrono::steady_clock::time_point end = chrono::steady_clock::now();
     chrono::microseconds delta_time = chrono::duration_cast<chrono::microseconds>(end - begin);

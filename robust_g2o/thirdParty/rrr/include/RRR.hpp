@@ -238,10 +238,6 @@ public:
 	{
 		IntPairSet loops;
 		gWrapper->setMeasurements(odom_vec, loop_vec, loops);
-
-		if ( loops.size() < clusteringThreshold )
-			return false;
-
 		clusterizer.clusterize(loops,clusteringThreshold);
 
 		return robustify(eraseIncorrectLinks); 
@@ -274,10 +270,11 @@ public:
 		}
 
 		/// ------------- consistentCluster are self-consistent --------- ////
+		//std::cout << "\nIntra Consistent Clusters: " << consistentClusters.size() << "/" << clusterizer.clusterCount() << std::endl;
 
 
 		bool done = false;
-		int max_iter = 10;
+		int max_iter = 30;
 		int iter = 0;
 		while(!done)
 		{
