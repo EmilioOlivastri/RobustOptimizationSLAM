@@ -1,11 +1,10 @@
-set(G2O_ROOT /home/slam-emix/Workspace/lib/g2o)
-
+set(G2O_ROOT /home/slamemix/Workspace/libs/g2o/build)
 find_package(G2O REQUIRED)
 
 include_directories(
   include
   ${EIGEN_INCLUDE_DIR}
-  "/usr/include/eigen3"
+  "/usr/local/include/eigen3"
   ${G2O_INCLUDE_DIR}
 )
 

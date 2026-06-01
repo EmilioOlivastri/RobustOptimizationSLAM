@@ -1,11 +1,14 @@
-cmake_minimum_required(VERSION 3.5.2)
+cmake_minimum_required(VERSION 3.5...4.5)
 project(switchlib)
 set(CMAKE_BUILD_TYPE Release)
+
+set(G2O_ROOT /home/slamemix/Workspace/libs/g2o/build)
+find_package(G2O REQUIRED)
 
 include_directories(
   include
   ${EIGEN_INCLUDE_DIR}
-  "/usr/include/eigen3"
+  "/usr/local/include/eigen3"
   ${G2O_INCLUDE_DIR}
 )
 

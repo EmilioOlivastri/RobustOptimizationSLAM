@@ -49,3 +49,6 @@ target_link_libraries(g2o_dataset_seeder PRIVATE g2o_common)
 
 add_executable(g2o_noise_applier_2D src/noise_applier_2D.cpp)
 target_link_libraries(g2o_noise_applier_2D PRIVATE g2o_common)
+
+add_executable(g2o_covariance_estimation src/covariance_estimation.cpp)
+target_link_libraries(g2o_covariance_estimation PRIVATE g2o_common)
