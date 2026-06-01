@@ -25,9 +25,9 @@ int main(int argc, char **argv)
   int inliers = cfg.canonic_inliers;
   double alpha = cfg.alpha; // alpha = 0.99
   string output_file_trj = cfg.output;
+  bool init_loop = cfg.init_loop;
   
   typedef Pose2 PoseType;
-  vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
   // reading file and creating factor graph
@@ -42,8 +42,11 @@ int main(int argc, char **argv)
   double th = Chi2inv(alpha, dof);
   for (auto& factor : *graph) 
   {
+    bool isbinary = new_init.exists(factor->front());
+    int delta = isbinary ? factor->front() - factor->back() : 0;
     // convert to between factor
-    if (new_init.exists(factor->front())) 
+    /**
+    if (isbinary && (init_loop || std::abs(delta) == 1))
     {
         BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
@@ -51,8 +54,8 @@ int main(int argc, char **argv)
           factor->back(),
           new_init.at<PoseType>(factor->front()).compose(btwn.measured()));
     }
+    /**/
 
-    int delta = factor->front() - factor->back();
     if ( std::abs(delta) > 1 ) 
     {
         BetweenFactor<PoseType>& loop =
@@ -73,9 +76,12 @@ int main(int argc, char **argv)
   NonlinearFactorGraph nfg = *graph;
   addPrior2D(nfg);
 
-  LevenbergMarquardtParams lmParams;
+  GaussNewtonParams lmParams;
   lmParams.setMaxIterations(maxIterations);
-  LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
+  lmParams.setVerbosity("ERROR");
+  //lmParams.setVerbosityLM("SUMMARY");
+  GaussNewtonOptimizer lm(nfg, new_init, lmParams);
+  //LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams);
 
   std::cout << "Optimizing the factor graph" << std::endl;
 
@@ -109,8 +115,8 @@ int main(int argc, char **argv)
     else ++tn;
   }
 
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  float precision = tp + fp > 0.0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0.0 ? tp / (float)(tp + fn) : 0.0; 
   float dt = delta_time.count() / 1000000.0;
 
   std::cout << "Optimization complete in " << dt << " [s]" << std::endl;
@@ -124,6 +130,7 @@ int main(int argc, char **argv)
   std::cout << "final error=" <<graph->error(result)<< std::endl;
   
   store2D(output_file_trj, result);
+  store2D("init.txt", new_init);
 
   string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
   ofstream outfile;

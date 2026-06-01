@@ -14,12 +14,13 @@ This repo is a collection of the Robust for Pose Graph Optimization algorithm wi
 
 ## How to build
 
-Remember to change the any variable data is dependent on your machine in the CMakeLists file.
-
 ```
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release \
+  -DG2O_ROOT=/path/to/g2o \
+  -DKimeraRPGO_DIR=/path/to/Kimera-RPGO/install/lib/cmake/KimeraRPGO \
+  -DGTSAM_DIR=/path/to/gtsam/install/lib/cmake/GTSAM
 make -j$(nproc --all)
 ```
 

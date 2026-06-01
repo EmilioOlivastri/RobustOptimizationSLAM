@@ -23,6 +23,7 @@ macro(FIND_G2O_LIBRARY MYLIBRARY MYLIBRARYNAME)
     NAMES "g2o_${MYLIBRARYNAME}_d"
     PATHS
     ${G2O_ROOT}/lib/Debug
+    ${G2O_ROOT}/build/lib
     ${G2O_ROOT}/lib
     $ENV{G2O_ROOT}/lib/Debug
     $ENV{G2O_ROOT}/lib
@@ -47,6 +48,7 @@ macro(FIND_G2O_LIBRARY MYLIBRARY MYLIBRARYNAME)
     NAMES "g2o_${MYLIBRARYNAME}"
     PATHS
     ${G2O_ROOT}/lib/Release
+    ${G2O_ROOT}/build/lib
     ${G2O_ROOT}/lib
     $ENV{G2O_ROOT}/lib/Release
     $ENV{G2O_ROOT}/lib

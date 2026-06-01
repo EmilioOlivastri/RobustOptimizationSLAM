@@ -8,7 +8,7 @@ int main(int argc, char** argv)
   std::string sol_path = argv[1];
   std::string gt_path  = argv[2];
   std::string out_path = argv[3];
-  
+    
   std::vector<Eigen::Isometry3d> computed_poses, gt_poses;
   bool is3D = false;
   if ( is3D )
@@ -25,7 +25,8 @@ int main(int argc, char** argv)
   double ate_rotation     = 0.f; double ate_translation  = 0.f;
   double rpe_rotation     = 0.f; double rpe_translation  = 0.f;
   double rmse_translation = 0.f;
-  
+
+
   evaluateRpe(computed_poses, gt_poses, rpe_rotation, rpe_translation);
   evaluateAte(computed_poses, gt_poses, ate_rotation, ate_translation, rmse_translation);
   

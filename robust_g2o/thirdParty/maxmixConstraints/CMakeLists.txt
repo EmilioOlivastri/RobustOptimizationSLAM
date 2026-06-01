@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.5.2)
+cmake_minimum_required(VERSION 3.5...4.5)
 project(maxmixlib)
 set(CMAKE_BUILD_TYPE Release)
 
 include_directories(
   include
-  ${EIGEN_INCLUDE_DIR}
-  "/usr/include/eigen3"
+  ${EIGEN3_INCLUDE_DIRS}
   ${G2O_INCLUDE_DIR}
 )
 

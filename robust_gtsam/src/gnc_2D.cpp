@@ -23,9 +23,9 @@ int main(int argc, char **argv)
   int inliers = cfg.canonic_inliers;
   double alpha = cfg.alpha; 
   string output_file_trj = cfg.output;
+  bool init_loop = cfg.init_loop;
 
   typedef Pose2 PoseType;
-  vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
   NonlinearFactorGraph::shared_ptr graph;
@@ -34,14 +34,17 @@ int main(int argc, char **argv)
   boost::tie(graph, initial) = readG2o(input_dataset, is3D);
   Values new_init = *initial;
 
-  int edge_counter = 0;
-  vector<size_t> knownInliers;
+  vector<size_t> knownInliers, idxsLoops;
+  cout << "Loop initialization " << endl;
   for (size_t idx = 0; idx < graph->size(); ++idx)
   {
     auto factor = (*graph)[idx];
+    bool isbinary = new_init.exists(factor->front());
+    int delta = factor->front() - factor->back();
 
     // convert to between factor
-    if (new_init.exists(factor->front())) 
+    /**
+    if (isbinary && (init_loop || std::abs(delta) == 1))
     {
         BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
@@ -49,13 +52,18 @@ int main(int argc, char **argv)
           factor->back(),
           new_init.at<PoseType>(factor->front()).compose(btwn.measured()));
     }
+    /**/
 
-    int delta = factor->front() - factor->back();
-    if ( abs(delta) > 1 ) loops.push_back(factor);
+    if ( abs(delta) > 1 ) 
+    {
+      loops.push_back(factor);
+      idxsLoops.push_back(idx);
+    }
     else knownInliers.push_back(idx);
   }
    
   // Add prior on the pose having index (key) = 0
+  Values better_init(new_init);
   NonlinearFactorGraph nfg = *graph;
   cout << "Adding prior on pose 0 " << endl;
   addPrior2D(nfg);
@@ -100,18 +108,37 @@ int main(int argc, char **argv)
     else ++tn;
   }
 
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  for (size_t idx = 0; idx < idxsLoops.size(); ++idx)
+  {
+    int real_idx = idxsLoops[idx];
+    auto factor = nfg[real_idx];
+    Values tmp;
+    tmp.insert(factor->back(), result.at<PoseType>(factor->back()));
+    tmp.insert(factor->front(), result.at<PoseType>(factor->front()));
+    double v = factor->error(tmp);
+    if ( v > barcSq) nfg.remove(real_idx);
+  }
+
+  LevenbergMarquardtParams lmParams_ref;
+  lmParams_ref.setMaxIterations(maxIterations);
+  lmParams_ref.setVerbosityLM("SUMMARY");
+  LevenbergMarquardtOptimizer lm(nfg, new_init, lmParams_ref);
+  Values result_lm = lm.optimize();
+
+  float precision = tp + fp > 0.0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0.0 ? tp / (float)(tp + fn) : 0.0; 
   float dt = delta_time.count() / 1000000.0;
 
   cout << "Optimization complete in " << dt << " [s]" << endl;
+  cout << "TP = " << tp << ", TN = " << tn << ", FP = " << fp << ", FN = " << fn << endl;
   cout << "Precision  = " << precision << endl;
   cout << "Recall = " << recall << endl;
-  cout << "initial error=" <<graph->error(*initial)<< endl;
-  cout << "final error=" <<graph->error(result)<< endl;
+  cout << "initial error=" <<graph->error(new_init)<< endl;
+  cout << "final error=" <<nfg.error(result)<< endl;
+  cout << "final error with init =" <<nfg.error(new_init)<< endl;
   
-
   store2D(output_file_trj, result);
+  store2D("refined.txt", result_lm);
 
   string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
   ofstream outfile;

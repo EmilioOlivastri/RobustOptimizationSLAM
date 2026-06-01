@@ -1,14 +1,15 @@
 #include "utils.hpp"
 #include "switchableConstraints/include/edge_switchPrior.hpp"
-#include "switchableConstraints/include/edge_se2Switchable.hpp"
+#include "switchableConstraints/include/edge_se3Switchable.hpp"
 #include "switchableConstraints/include/vertex_switchLinear.hpp"
+#include "g2o/types/slam3d/isometry3d_gradients.h"
 
 using namespace std;
 using namespace g2o;
 
 G2O_USE_OPTIMIZATION_LIBRARY(eigen);
 
-EdgeSE2Switchable* getSwitchableEdge(g2o::EdgeSE2* candidate, VertexSwitchLinear* sw);
+EdgeSE3Switchable* getSwitchableEdge(g2o::EdgeSE3* candidate, VertexSwitchLinear* sw);
 
 int main(int argc, char** argv) 
 {
@@ -28,24 +29,23 @@ int main(int argc, char** argv)
   double inlier_th = cfg.inlier_th;
   int inliers = cfg.canonic_inliers;
 
-
   // Storing initial guess and vertices of optimization
-  vector<SE2> init_poses;
-  vector<VertexSE2*> v_poses;
+  vector<Eigen::Isometry3d> init_poses;
+  vector<VertexSE3*> v_poses;
 
   // create the optimizer to load the data and carry out the optimization
   SparseOptimizer optimizer;
-  setProblem<SE2, EdgeSE2, VertexSE2>(input_dataset, optimizer, init_poses, v_poses);
+  setProblem<Eigen::Isometry3d, EdgeSE3, VertexSE3>(cfg.dataset, optimizer, init_poses, v_poses);
   int id_swv = optimizer.vertices().size() + 300;
 
-  std::vector<EdgeSE2*> e2remove;
-  std::vector<EdgeSE2Switchable*> e2add_loops;
+  std::vector<EdgeSE3*> e2remove;
+  std::vector<EdgeSE3Switchable*> e2add_loops;
   std::vector<EdgeSwitchPrior*> e2add_priors;
   std::vector<VertexSwitchLinear*> sw_vs;
   for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
   {
-    EdgeSE2* edge_odom = dynamic_cast<EdgeSE2*>(*it_e);
-    
+    EdgeSE3* edge_odom = dynamic_cast<EdgeSE3*>(*it_e);
+
     /* Odom edge loop closure */
     if ( edge_odom != nullptr && abs(edge_odom->vertices()[1]->id() - edge_odom->vertices()[0]->id()) > 1  )
     {
@@ -63,7 +63,7 @@ int main(int argc, char** argv)
         sw_prior->setInformation(information_mat * information_edge);      
          
         // Switchable edge
-        EdgeSE2Switchable* sw_constraint = getSwitchableEdge(edge_odom, sw);
+        EdgeSE3Switchable* sw_constraint = getSwitchableEdge(edge_odom, sw);
 
         // Remove later the originals and and the new ones 
         e2remove.emplace_back(edge_odom);
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
         ++id_swv;
     }
   }
-
+  
   for ( int i = 0 ; i < e2remove.size() ; ++i )
   {
     optimizer.addVertex(sw_vs[i]);
@@ -85,6 +85,7 @@ int main(int argc, char** argv)
 
   // Optimize the problem
   std::cout << "Starting optimization : " << std::endl;
+  optimizer.vertex(0)->setFixed(true);
   optimizer.initializeOptimization();
   chrono::steady_clock::time_point begin = chrono::steady_clock::now();
   optimizer.optimize(maxIterations);
@@ -100,8 +101,8 @@ int main(int argc, char** argv)
   for ( int idx = inliers; idx < sw_vs.size(); ++idx)
       sw_vs[idx]->estimate() > inlier_th ? ++fp : ++tn;  
 
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0; 
   float dt = delta_time.count() / 1000000.0;
 
   std::cout << "Optimization complete in " << dt << " [s]" << std::endl;
@@ -115,20 +116,19 @@ int main(int argc, char** argv)
   std::cout << "Optimtization Concluded!" << std::endl;
 
   ofstream outfile;
-  string output_file_trj = cfg.output;
-  outfile.open(output_file_trj.c_str()); 
+  outfile.open(cfg.output.c_str()); 
   for (size_t it = 0; it < optimizer.vertices().size(); ++it )
-  { 
-      VertexSE2* v = dynamic_cast<VertexSE2*>(optimizer.vertex(it));
-      
+  {
+      VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
+
       if ( v == nullptr ) continue;
 
       writeVertex(outfile, v);
   }
   outfile.close();
 
-  string output_file_pr = output_file_trj.substr(0, output_file_trj.size() - 3) + "PR";
-  outfile.open(output_file_pr.c_str());
+  string out = cfg.output.substr(0, cfg.output.size() - 3) + "PR";
+  outfile.open(out.c_str());
   outfile << precision << " " << recall << endl;
   outfile << dt << endl;
   outfile.close();
@@ -136,13 +136,14 @@ int main(int argc, char** argv)
   return 0;
 }
 
-EdgeSE2Switchable* getSwitchableEdge(EdgeSE2* candidate, VertexSwitchLinear* sw)
+EdgeSE3Switchable* getSwitchableEdge(EdgeSE3* candidate, VertexSwitchLinear* sw)
 {
-    EdgeSE2Switchable* edge = new EdgeSE2Switchable();
+    EdgeSE3Switchable* edge = new EdgeSE3Switchable();
     edge->setVertex(0, candidate->vertex(0));
     edge->setVertex(1, candidate->vertex(1));
     edge->setVertex(2, sw);
-    edge->setMeasurement(candidate->measurement());
+    Eigen::Isometry3d meas = candidate->measurement(); 
+    edge->setMeasurement(SE3Quat(meas.rotation(), meas.translation()));
     edge->setInformation(candidate->information());
 
     return edge;

@@ -215,12 +215,15 @@ def writeDataset(filename, vertices, edges, mode, outliers=0, groupSize=1, doLoc
         if mode == 3:
             x1=random.gauss(0,0.3)
             x2=random.gauss(0,0.3)
-            x3=random.gauss(0,0.3)
+            #x3=random.gauss(0,0.3)
+            x3=random.gauss(0,0.01)
             
             
             sigma = 10.0*pi/180.0
-            roll = random.gauss(0,sigma)
-            pitch = random.gauss(0,sigma)
+            #roll = random.gauss(0,sigma)
+            roll = random.gauss(0,sigma * 0.1)
+            #pitch = random.gauss(0,sigma)
+            pitch = random.gauss(0,sigma * 0.1)
             yaw = random.gauss(0,sigma)            
             (q0, q1, q2, q3) = euler_to_quat(yaw, pitch, roll)
 

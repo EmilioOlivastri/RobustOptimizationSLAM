@@ -28,7 +28,7 @@ void VertexSwitchLinear::setToOriginImpl()
 }
 
 
-bool VertexSwitchLinear::setEstimateDataImpl(const number_t* et)
+bool VertexSwitchLinear::setEstimateDataImpl(const double* et)
 {
   _x=(*et);
   _estimate=_x;
@@ -37,7 +37,7 @@ bool VertexSwitchLinear::setEstimateDataImpl(const number_t* et)
 }
 
 
-void VertexSwitchLinear::oplusImpl(const number_t* update)
+void VertexSwitchLinear::oplusImpl(const double* update)
 {
   _x += update[0];
 

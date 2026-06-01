@@ -1,3 +1,4 @@
 add_subdirectory(switchableConstraints)
 add_subdirectory(maxmixConstraints)
 add_subdirectory(rrr)
+add_subdirectory(graduatedNonConvexity)

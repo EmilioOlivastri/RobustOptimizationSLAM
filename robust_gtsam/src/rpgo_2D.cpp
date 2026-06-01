@@ -34,9 +34,9 @@ int main(int argc, char* argv[])
   int inliers = cfg.canonic_inliers;
   double alpha = cfg.alpha; 
   string output_file_trj = cfg.output;
+  bool init_loop = cfg.init_loop;
 
   typedef Pose2 PoseType;
-  vector<PoseType> poses;
   vector<NonlinearFactor::shared_ptr> loops;
 
   RobustSolverParams params;
@@ -54,8 +54,11 @@ int main(int argc, char* argv[])
   unique_ptr<RobustSolver> pgo = KimeraRPGO::make_unique<RobustSolver>(params);  
   for (const auto& factor : *graph) 
   {
+    bool isbinary = new_init.exists(factor->front());
+    int delta = isbinary ? factor->front() - factor->back() : 0;
+
     // convert to between factor
-    if (new_init.exists(factor->front()) && abs(int(factor->front() - factor->back())) == 1) 
+    if (isbinary && (init_loop || abs(delta) == 1)) 
     {
       BetweenFactor<PoseType>& btwn =
           *boost::dynamic_pointer_cast<BetweenFactor<PoseType>>(factor);
@@ -64,7 +67,6 @@ int main(int argc, char* argv[])
           new_init.at<PoseType>(factor->front()).compose(btwn.measured()));
     }
 
-    int delta = factor->front() - factor->back();
     if ( abs(delta) > 1 ) loops.push_back(factor);    
   }
 
@@ -103,8 +105,8 @@ int main(int argc, char* argv[])
     if ( v < barcSq ) ++fp;
     else ++tn;
   }
-  float precision = tp / (float)(tp + fp);
-  float recall    = tp / (float)(tp + fn); 
+  float precision = tp + fp > 0.0 ? tp / (float)(tp + fp) : 0.0;
+  float recall    = tp + fn > 0.0 ? tp / (float)(tp + fn) : 0.0; 
 
   cout << "Optimization complete in " << dt << " [s]" << endl;
   cout << "Precision  = " << precision << endl;

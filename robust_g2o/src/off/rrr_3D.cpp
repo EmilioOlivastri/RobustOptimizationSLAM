@@ -4,16 +4,19 @@
 using namespace g2o;
 using namespace std;
 
-typedef RRR<G2O_Interface<VertexSE2, EdgeSE2>> RRR_2D_G2O;
+typedef RRR<G2O_Interface<VertexSE3, EdgeSE3>> RRR_3D_G2O;
 
 int main(int argc, char **argv)
 {
-
 	string cfg_file;
 	CommandArgs arg;
 	arg.param("cfg", cfg_file, "",
 			  "Configuration File(.yaml)");
 	arg.parseArgs(argc, argv);
+
+	// Storing initial guess and vertices of optimization
+	vector<SE2> init_poses;
+	vector<VertexSE2*> v_poses;
 
 	Config cfg;
   	readConfig(cfg_file, cfg);
@@ -25,18 +28,17 @@ int main(int argc, char **argv)
 	int nIter = 50;
 
 	g2o::SparseOptimizer optimizer;
-	auto linearSolver = g2o::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
+	auto linearSolver = std::make_unique<LinearSolverEigen<BlockSolverX::PoseMatrixType>>();
 	linearSolver->setBlockOrdering(false);
-	auto blockSolver = g2o::make_unique<BlockSolverX>(std::move(linearSolver));
+	auto blockSolver = std::make_unique<BlockSolverX>(std::move(linearSolver));
 	g2o::OptimizationAlgorithmGaussNewton *solverGauss = new g2o::OptimizationAlgorithmGaussNewton(std::move(blockSolver));
 	optimizer.setAlgorithm(solverGauss);
 	optimizer.load(input_dataset.c_str());
-
+	
 	vector<string> gt_loops;
 	for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
   	{
-    	EdgeSE2* edge_odom = dynamic_cast<EdgeSE2*>(*it_e);
-		/* Odom edge loop closure */ 
+    	EdgeSE3* edge_odom = dynamic_cast<EdgeSE3*>(*it_e);
 		if ( edge_odom != nullptr && abs(edge_odom->vertices()[1]->id() - edge_odom->vertices()[0]->id()) > 1  )
 		{
 			string key = to_string(edge_odom->vertices()[0]->id()) + "-" + to_string(edge_odom->vertices()[1]->id());
@@ -46,8 +48,8 @@ int main(int argc, char **argv)
 
 	/* Initialized RRR with the parameters defined */
   	chrono::steady_clock::time_point begin = chrono::steady_clock::now();
-	RRR_2D_G2O rrr(clusteringThreshold, nIter);
-	rrr.setOptimizer(&optimizer);
+	RRR_3D_G2O rrr(clusteringThreshold, nIter);
+    rrr.setOptimizer(&optimizer);
 	rrr.robustify();
 	rrr.removeIncorrectLoops();
 	odometryInitialization<EdgeSE2, VertexSE2>(optimizer);
@@ -59,10 +61,10 @@ int main(int argc, char **argv)
 	std::cout << "Optimtization Concluded!" << std::endl;
 	ofstream outfile;
 	string output_file_trj = cfg.output;
-	outfile.open(output_file_trj.c_str()); 
+	outfile.open(output_file_trj.c_str());
 	for (size_t it = 0; it < optimizer.vertices().size(); ++it )
 	{
-		VertexSE2* v = dynamic_cast<VertexSE2*>(optimizer.vertex(it));
+		VertexSE3* v = dynamic_cast<VertexSE3*>(optimizer.vertex(it));
 		writeVertex(outfile, v);
 	}
 	outfile.close();
@@ -70,7 +72,7 @@ int main(int argc, char **argv)
 	vector<string> est_loops;		
 	for ( auto it_e = optimizer.edges().begin(); it_e != optimizer.edges().end(); ++it_e )
   	{
-    	EdgeSE2* edge_odom = dynamic_cast<EdgeSE2*>(*it_e);
+    	EdgeSE3* edge_odom = dynamic_cast<EdgeSE3*>(*it_e);
 		if ( edge_odom != nullptr && abs(edge_odom->vertices()[1]->id() - edge_odom->vertices()[0]->id()) > 1  )
 		{
 			string key = to_string(edge_odom->vertices()[0]->id()) + "-" + to_string(edge_odom->vertices()[1]->id());
@@ -93,8 +95,8 @@ int main(int argc, char **argv)
 		else ++fp;
 	}
 
-	float precision = tp / (float)(tp + fp);
-	float recall    = tp / (float)(tp + fn); 
+	float precision = tp + fp > 0 ? tp / (float)(tp + fp) : 0.0;
+  	float recall    = tp + fn > 0 ? tp / (float)(tp + fn) : 0.0; 
 	float dt = delta_time.count() / 1000000.0;
 
 	std::cout << "Canonic Inliers = " << cfg.canonic_inliers << std::endl;
@@ -111,6 +113,6 @@ int main(int argc, char **argv)
 	outfile << precision << " " << recall << endl;
 	outfile << dt << endl;
 	outfile.close();
-	
+
 	return 0;
 }

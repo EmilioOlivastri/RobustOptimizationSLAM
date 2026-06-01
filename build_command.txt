@@ -1,0 +1,1 @@
+cmake .. -DCMAKE_BUILD_TYPE=Release -DG2O_ROOT=/home/slamemix/Workspace/libs/g2o -DKimeraRPGO_DIR=/home/slamemix/Workspace/RPGO/Kimera-RPGO/install/lib/cmake/KimeraRPGO -DGTSAM_DIR=/home/slamemix/Workspace/libs/gtsam/install/lib/cmake/GTSAM
